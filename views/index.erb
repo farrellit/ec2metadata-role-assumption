@@ -1,0 +1,46 @@
+<html>
+<head>
+<title>ec2metadata mockup</title>
+</head>
+<body>
+<h1><code>ec2metadata</code> mockup</h1>
+<div id='assumerole'>
+<form method='POST' action='/authenticate'>
+<h2>Assume Role:</h2>
+<table>
+  <tr>
+    <td>Role</td>
+    <td><select name='role' >
+    <% roles.each do |role| 
+      %><option value='<%= role %>'><%= role %></option>
+    <% end %>
+    </select></td>
+  </tr>
+  <tr>
+    <td>MFA Device</td>
+    <td>
+      <select name='serial'>
+      <% mfa_devices.each do |mfa_device|
+        %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
+      <% end %>
+      </select>
+      <option>
+    </td>
+  </tr>
+  <tr>
+    <td>MFA Token</td>
+    <td><input type='number' name='mfa' ></input></td>
+  </tr>
+  <tr><td>Duration</td>
+  <td><input name='duration' value='900'></input></td>
+  </tr>
+  <tr><td rowspan='2'><input type='submit' value='Assume Role'></input></td></tr>
+</table>
+</form>
+
+</div>
+<iframe src='/status'>
+</iframe>
+
+</body>
+</html>

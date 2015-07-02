@@ -33,3 +33,7 @@ Select the appropriate role and enter your MFA token, and if desired adjust the 
 
 Once you submit, your new session tokens for that role should be available.  You'll also see them in an iframe below the 
 assumption form. 
+
+From this point on, most SDKs' API calls will use these credentials to authenticate. If they expire you'll have to generate a new one.  This  should include any virtual machines on your host that route through the host ( works great for Vagrant boxes testing application deploys, for example ).  
+
+

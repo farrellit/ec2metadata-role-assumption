@@ -6,7 +6,7 @@ unless $?.exitstatus == 0
   abort "Can't run without the aws command line utility to assume session token"
 end
 
-required_env_keys = %w[ AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION ]
+required_env_keys = %w[ AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ]
 missing_env_keys = required_env_keys - ENV.keys 
 unless missing_env_keys.empty? 
   fail "Missing environment variables: #{missing_env_keys.inspect}"

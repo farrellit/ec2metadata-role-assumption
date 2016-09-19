@@ -40,8 +40,8 @@ require 'json'
 require 'shellwords'
 require 'open3'
 
-set :bind, '169.254.169.254'
-set :port, 80
+set :bind, '0.0.0.0'
+set :port, 4567
 
 credentials = nil
 

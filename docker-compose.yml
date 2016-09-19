@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+  ec2metadata:
+    build: .
+    ports: [ "8009:4567" ]
+    volumes: [ ".:/code" ]
+    depends_on: [ ]
+    dns: []
+    environment: 
+    - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+    - AWS_REGION=us-east-1

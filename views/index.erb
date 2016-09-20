@@ -1,9 +1,16 @@
 <html>
 <head>
-<title>ec2metadata mockup</title>
+<title>ec2metadata</title>
 </head>
 <body>
-<h1><code>ec2metadata</code> mockup</h1>
+<h1>ec2metadata</h1>
+
+<form method='POST' action='/profile'>
+<p>Current profile: <code><%= current_profile %></code></p>
+<input type='hidden' name='role' value=''></input>
+<input type='submit' value='Unset Profile'></input>
+</form>
+
 <div id='assumerole'>
 <form method='POST' action='/authenticate'>
 <h2>Assume Role:</h2>

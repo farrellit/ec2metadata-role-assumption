@@ -11,6 +11,7 @@ GEM
       aws-sdk-core (= 2.0.38)
     builder (3.2.2)
     erubis (2.7.0)
+    inifile (3.0.0)
     jmespath (1.0.2)
       multi_json (~> 1.0)
     multi_json (1.11.0)
@@ -29,4 +30,5 @@ PLATFORMS
 DEPENDENCIES
   aws-sdk (~> 2)
   erubis
+  inifile
   sinatra

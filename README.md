@@ -2,38 +2,36 @@
 
 Provides an endpoint on 169.254.169.254:80 that can answer AWS client requests for credentials (boto, aws-sdk-ruby, and others will try to pull from here automatically ),  and an interface to assume roles to configure those credentials through a web interface.  
 
-## Setup
+## Network Setup
 
-`setup.sh` sets up your environment with an alias on lo for Mac OSX users.  As long as you can 
-bind to `169.254.169.254`, you should be good; it can be on an interface or a virtual interface or 
-a loopback, but don't put it on the network, as this service exposes your credentials.
+You need a local 169.254.169.254 address which can be routed by local sources.  
 
-### Recommended AWS setup
+`setup.sh` has been my dumping ground for commands.  I've found the `pf` stuff to be a good solution o osx.  I think there's an `iptables` invocation for linux.  It's absolutely critical that you make sure this is only available locally.  
 
-Export AWS_SECRET_ACCESS_KEY & AWS_ACCESS_KEY_ID or AWS_DEFAULT_PROFILE in the shell that's executing the ruby server.  
+### AWS Setup
 
-These variable override the metadata lookup so you can override the credentials provided by this service for a particular shell, but be aware that if not otherwise configured, all shells and programs will otherwise have access to the roles assumed through the metadata service.  
+The program expects to find credentials in either `~/.aws/credentials` or `/code/.aws/credentials` (useful in docker).  You choose the profile in the application.  
 
 ## Invocation
 
-Invocation requires sudo so it can bind to port 80, but there are other options 
-if you don't want to run as sudo ( you'll have to allow it to bind to 80 in some 
-other way or forward port 80 requests; I don't know of a way to configure the 
-metadata server for boto to be on some other port or address )
+Docker makes this easy.
 
-`./setup.sh`
-`sudo -E bundle exec ruby ec2metadata.rb`
+```
+make
+```
+
+If this fails because `make` is not available, simply `cat Makefile` and you'll be on your way to running the very simple invocation of `docker-compose` to produce a running server.  
 
 ## Usage
 
-Navigate to http://169.254.169.254 and, if invoked as a user that has access, you should see a select dropdown for all the roles that match the regex 
-can assume.  
+Navigate to http://169.254.169.254.
 
-Select the appropriate role and enter your MFA token, and if desired adjust the expriry time ( in seconds ).  
+1. Select a profile.
+2. Patiently await the loading of the roles under that account (your user requires read permission for this of course)
+3. Select the desired role from the list.
+4. Type in MFA token, configure time if desired
+5. Submit
+7. 169.254.169.254 supplies credentials to the local machine, for any AWS SDK that uses the standard credential search processes  
+8. Browser back button is shamefully required to complete cycle and return to the main role selection page
 
-Once you submit, your new session tokens for that role should be available.  You'll also see them in an iframe below the 
-assumption form. 
-
-From this point on, most SDKs' API calls will use these credentials to authenticate. If they expire you'll have to generate a new one.  This  should include any virtual machines on your host that route through the host ( works great for Vagrant boxes testing application deploys, for example ).  
-
-
+It's pretty self explanatory and quite simplistic, barely adequate for the job.  

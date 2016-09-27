@@ -4,14 +4,15 @@
 </head>
 <body>
 <h1>ec2metadata</h1>
-<h2>Profile Selection</h2>
-<div id='assumerole'>
-<h2>Choose Profile</h2>
 <p>ec2metadata supports multiple profiles which are discovered from <code>~/.aws/credentials</code>.  Select the profile here and it will be used to authorize future requets 
 listing and assuming the roles and discovering your MFA token's serial.
 </p>
  
 <p>The profile's credentials are not exposed to consuers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
+
+
+<div id='assumerole'>
+<h2>Profile Selection</h2>
 
 <form method='POST' action='/profile'>
 <label for=profile>Profile:</label> <select name='profile' >

@@ -1,2 +1,6 @@
-all:
-	docker-compose build && docker-compose up
+all: build up
+build:
+	docker-compose build 
+up:
+	docker-compose up
+

@@ -48,8 +48,9 @@ sort_roles = proc {
       unless res # one or the other is in used_roles
 	      #$stderr.puts "neither #{a} or #{b} in used_roles"
         order = [
+          %r|:role/admin$|,
           %r|:role/app/| ,
-          %r|:role/admin/| ,
+          %r|:role/admin/|,
           %r|:role/read/| ,
         ]
 	      order.each do |r|
@@ -78,7 +79,7 @@ discover_profile_data = proc {
 	mfa_devices =[]
   if current_profile
     puts "Looking up roles"
-    role_regex=':role/(app|read|admin)/'
+    role_regex=':role/(app|read|admin)'
 	  `aws iam --profile #{Shellwords.escape current_profile} --region us-east-1 list-roles --query *[*].[Arn] --output text | egrep '#{role_regex}'`.lines.each do |line|
 	    roles << line.strip
       puts line.strip

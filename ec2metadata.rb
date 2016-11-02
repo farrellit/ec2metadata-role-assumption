@@ -11,6 +11,8 @@ region='us-east-1'
 
 profiles = []
 
+
+
 profile_path = "~/.aws/credentials"
 begin 
   profile_path = File.expand_path profile_path
@@ -73,11 +75,25 @@ sort_roles = proc {
 	  end
 }
 
-discover_profile_data = proc { 
+class ProfileAuthException < RuntimeError; end
+
+profile_auth = Hash.new
+
+discover_profile_data = proc {  |mfa,mfa_exp|
 	roles = []
   used_roles = []
+  profile_auth[current_profile] = {}  if not profile_auth.keys.include? current_profile 
 	mfa_devices =[]
   if current_profile
+	  `aws --region us-east-1 --profile #{Shellwords.escape current_profile} iam list-mfa-devices --query MFADevices[*].SerialNumber --output text`.each_line do |line|
+	    $stderr.puts "MFA Device: #{line}"
+	    mfa_devices << line.strip
+	  end
+    if mfa =~ /^\d+$/ and mfa_exp =~ /^\d+$/
+      authdata, stderr, status  = Open3.capture3( "aws sts get-session-token --profile #{Shellwords.escape current_profile} --token-code #{Shellwords.escape mfa}  --serial-number #{Shellwords.escape mfa_devices.first} --duration-seconds #{Shellwords.escape mfa_exp}" )
+      raise ProfileAuthException, "#{profile_auth} #{stderr}" unless status == 0
+      profile_auth[current_profile]=JSON.parse( authdata )['Credentials']
+    end
     puts "Looking up roles"
     role_regex=':role/(app|read|admin)'
 	  `aws iam --profile #{Shellwords.escape current_profile} --region us-east-1 list-roles --query *[*].[Arn] --output text | egrep '#{role_regex}'`.lines.each do |line|
@@ -85,10 +101,6 @@ discover_profile_data = proc {
       puts line.strip
 	  end
     sort_roles.call()
-	  `aws --region us-east-1 --profile #{Shellwords.escape current_profile} iam list-mfa-devices --query MFADevices[*].SerialNumber --output text`.each_line do |line|
-	    $stderr.puts "MFA Device: #{line}"
-	    mfa_devices << line.strip
-	  end
   end
 }
 current_role = nil
@@ -136,18 +148,22 @@ requester_roles = PerRequesterRoles.new
 
 get '/latest/meta-data/iam/security-credentials/' do
  requester_roles.log_requester request
- if current_role
-    current_role
-  end 
+ if current_profile
+    if current_role
+      current_role
+    end 
+  end
 end
 
 get %r|/latest/meta-data/iam/security-credentials/(.+)| do
   requester_roles.log_requester request
-  if params['captures'].first == current_role
-    content_type 'text/json'
-    JSON.pretty_generate credentials
-  else
-    status 404
+  if current_profile
+    if params['captures'].first == current_role
+      content_type 'text/json'
+      JSON.pretty_generate credentials
+    else
+      status 404
+    end
   end
 end
 
@@ -167,9 +183,21 @@ post '/authenticate' do
     used_roles.delete params[:role]
   end
   used_roles.unshift params[:role]
-  command = "aws --profile #{Shellwords.escape current_profile} --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role #{mfa_str} --duration-seconds #{Shellwords.escape params[:duration]}"
-  $stderr.puts command
-  stdout, stderr, status = Open3.capture3( command )
+  # $stderr.puts command
+  if profile_auth[current_profile].empty? 
+    command = "aws --profile #{Shellwords.escape current_profile} --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role #{mfa_str} --duration-seconds #{Shellwords.escape params[:duration]}"
+    stdout, stderr, status = Open3.capture3( command )
+  else
+    command = "aws --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role --duration-seconds #{Shellwords.escape params[:duration]}"
+    stdout, stderr, status = Open3.capture3( 
+      { 
+        "AWS_SESSION_TOKEN"=>profile_auth[current_profile]['SessionToken'],
+        "AWS_ACCESS_KEY_ID"=>profile_auth[current_profile]['AccessKeyId'],
+        "AWS_SECRET_ACCESS_KEY"=>profile_auth[current_profile]['SecretAccessKey'],
+      },
+      command 
+    )
+  end
   result = { stdout: stdout, stderr: stderr, status: status }
   if status.exitstatus == 0 
     data = JSON.parse(stdout)
@@ -220,30 +248,62 @@ get '/profile' do
 end 
 
 post '/profile' do
+  begin 
   if params[:profile] == "" or params[:profile] == nil
     current_profile = nil
-    discover_profile_data.call
+    current_role = nil
+    discover_profile_data.call( nil, nil )
     redirect '/', 303 
   elsif profiles.include? params[:profile]
+    puts params.inspect
     current_profile = params[:profile]
-    discover_profile_data.call
+    discover_profile_data.call( params[:profile_mfa], params[:profile_mfa_time] )
     redirect '/', 303 
   else
     status 404
     "Couldn't change profile: no such profile '#{params[:profile]}'"
   end
+  rescue ProfileAuthException => e
+    status 401
+    content_type "text/plain"
+    e.message
+  end
 end
 
-get '/debug' do
-    sort_roles.call()
-  { :mfa_devices => mfa_devices,  :roles => roles, credentials: credentials, current_role: current_role }.to_json
-end
-
-get '/debug/used_roles' do
-  content_type 'text/json'
-  JSON.pretty_generate( { used_roles: used_roles } )
-end
-
-get '/debug/requesters' do 
-  requester_roles.dump_json
+if settings.environment == :development
+  
+  get '/debug/profile_auth' do
+      command= "aws sts get-caller-identity"
+      begin
+        env= {
+          "AWS_SESSION_TOKEN"=>profile_auth[current_profile]['SessionToken'],
+          "AWS_ACCESS_KEY_ID"=>profile_auth[current_profile]['AccessKeyId'],
+          "AWS_SECRET_ACCESS_KEY"=>profile_auth[current_profile]['SecretAccessKey'],
+        }
+        command= "aws sts get-caller-identity"
+      rescue NoMethodError
+        env = {
+          "PROFILE_AUTH"=>profile_auth.inspect
+        }
+        command= "env"
+      end
+      stdout, stderr, status = Open3.capture3( env, command)
+      content_type "text/json"
+      JSON.pretty_generate( { stdout: stdout, stderr: stderr, status: status } )
+  end
+  
+  get '/debug' do
+      sort_roles.call()
+    { :mfa_devices => mfa_devices,  :roles => roles, credentials: credentials, current_role: current_role, profile_auth: profile_auth }.to_json
+  end
+  
+  get '/debug/used_roles' do
+    content_type 'text/json'
+    JSON.pretty_generate( { used_roles: used_roles } )
+  end
+  
+  get '/debug/requesters' do 
+    requester_roles.dump_json
+  end
+  
 end

@@ -66,9 +66,22 @@ end %>
 </form>
 
 </div>
-<h3>Current Exposed Identity</h3>
-<iframe width='95%' src='/identity'>
+<% if current_role %>
+<h3>Current Role</h3>
+<% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+<p>Since your profile is MFA authenticated until <%=profile_auth[current_profile]['Expiration']=%>,
+you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically 
+assume this role</a>. This provides some <a href='/using-config'>useful functionality</a>. </p>
+<% else %>
+<p>Provide MFA at profile selection time for additional options.</p>
+<% end %>
+<iframe width='95%' src='/latest/meta-data/iam/security-credentials/'>
 </iframe>
 
+<h3>Current Exposed Identity</h3>
+<p>This identity is straight from <kbd>aws sts get-caller-identity</kbd>.</p>
+<iframe width='95%' src='/identity'>
+</iframe>
+<% end %>
 </body>
 </html>

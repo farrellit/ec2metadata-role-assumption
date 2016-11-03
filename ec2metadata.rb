@@ -159,6 +159,20 @@ end
 require 'zlib' 
 require 'date'
 
+get %r|^/config/current$| do 
+    if current_role
+    redirect "/config/#{current_role}", 303 
+    else
+    status 404
+    "No role is set"
+    end
+end
+
+get %r|^/config/(.+)/?$| do
+    content_type 'text/plain'
+    erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile] } }
+end
+
 get %r|/latest/meta-data/iam/security-credentials/(.+)| do
   requester_roles.log_requester request
   if current_profile
@@ -172,6 +186,10 @@ get %r|/latest/meta-data/iam/security-credentials/(.+)| do
       status 404
     end
   end
+end
+
+get '/using-config' do 
+  erb :using_config
 end
 
 get '/status' do
@@ -241,7 +259,7 @@ get '/' do
     erb :profile, { locals: { profiles: profiles } }
   else
     sort_roles.call()
-    erb :index, { locals: { requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
+    erb :index, { locals: { current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
   end
 end
 
@@ -249,7 +267,6 @@ get '/identity' do
   content_type "application/json"
   `aws sts get-caller-identity`
 end
-
 
 get '/profile' do
   if current_profile

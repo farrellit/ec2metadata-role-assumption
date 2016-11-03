@@ -16,8 +16,8 @@
 <!--
 <h2>Requesters</h2>
 <select name='requester'>
-<% requesters.each do |id,data| 
-%><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><% 
+<% requesters.each do |id,data|
+%><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><%
 end %>
 </select>
 -->
@@ -25,17 +25,18 @@ end %>
 <table>
   <tr>
     <td>Role</td>
-    <td><select name='role' >
-    <% roles.each do |role| 
+    <td><input name='role' list='roles' style="width: 500px;">
+    <datalist id='roles'>
+    <% roles.each do |role|
       %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
     <% end %>
-    </select></td>
+    </datalist></td>
   </tr>
     <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
     <tr><td colspan=2 style='padding: 1em'>
     <p><em>
-      Since an MFA token was entered at profile selection time, it needn't be 
-      entered here.  However, you're still free to do so if you like. 
+      Since an MFA token was entered at profile selection time, it needn't be
+      entered here.  However, you're still free to do so if you like.
     </em>
     </p>
     <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
@@ -46,7 +47,7 @@ end %>
     <td>MFA Device
     </td>
     <td>
-      <select name='serial'>
+      <select name='serial' style="width: 500px;">
       <% mfa_devices.each do |mfa_device|
         %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
       <% end %>
@@ -54,12 +55,12 @@ end %>
       <option>
     </td>
   </tr>
+  <tr><td>Duration</td>
+    <td><input name='duration' value='1800' style="width:150px;"></input></td>
+  </tr>
   <tr>
     <td>MFA Token</td>
-    <td><input type='number' name='mfa' ></input></td>
-  </tr>
-  <tr><td>Duration</td>
-  <td><input name='duration' value='1800'></input></td>
+    <td><input type='number' name='mfa' style="width:150px;" ></input></td>
   </tr>
   <tr><td rowspan='2'><input style="background-color: #ffafaf" type='submit' value='Assume Role'></input></td></tr>
 </table>
@@ -70,7 +71,7 @@ end %>
 <h3>Current Role</h3>
 <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
 <p>Since your profile is MFA authenticated until <%=profile_auth[current_profile]['Expiration']=%>,
-you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically 
+you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically
 assume this role</a>. This provides some <a href='/using-config'>useful functionality</a>. </p>
 <% else %>
 <p>Provide MFA at profile selection time for additional options.</p>

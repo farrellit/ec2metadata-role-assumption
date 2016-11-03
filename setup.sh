@@ -6,5 +6,5 @@ sudo ifconfig lo0 alias 169.254.169.254 255.255.255.255
 grep -F '169.254.169.254 localhost' /etc/hosts || echo '169.254.169.254 localhost' | sudo tee -a /etc/hosts
 
 echo "
-rdr pass on lo0 inet proto tcp from '(lo0)' to 169.254.169.254 port 80 -> 127.0.0.1 port 8009
+rdr pass on lo0 inet proto tcp from (lo0) to 169.254.169.254 port 80 -> 127.0.0.1 port 8009
 " | sudo pfctl -ef -

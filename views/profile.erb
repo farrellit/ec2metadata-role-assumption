@@ -8,7 +8,7 @@
 listing and assuming the roles and discovering your MFA token's serial.
 </p>
  
-<p>The profile's credentials are not exposed to consuers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
+<p>The profile's credentials are not exposed to consumers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
 
 
 <div id='assumerole'>
@@ -21,11 +21,15 @@ listing and assuming the roles and discovering your MFA token's serial.
     <% end %>
     <option value=''>Unset Profile</option>
     </select>
+<p>If you enter MFA below, a session token for this profile can be used 
+in lieu of an MFA token for role assumption later.  This token can be good for 
+as much as one day (86400 seconds).
+</p>
 <p>
 MFA: <input type=number name='profile_mfa'></input>
 </p>
 <p>
-Time: <input type=number name='profile_mfa_time' value='86400'></input>
+Duration (Seconds): <input type=number name='profile_mfa_time' value='86400'></input>
 </p>
 <p>
 <input type=submit>Select</input>

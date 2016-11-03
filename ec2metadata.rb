@@ -146,7 +146,7 @@ end
 
 requester_roles = PerRequesterRoles.new 
 
-get '/latest/meta-data/iam/security-credentials/' do
+get %r|/latest/meta-data/iam/security-credentials/?$| do
  requester_roles.log_requester request
  if current_profile
     if current_role
@@ -155,12 +155,19 @@ get '/latest/meta-data/iam/security-credentials/' do
   end
 end
 
+#require 'digest/sha1' # crc should be faster!
+require 'zlib' 
+require 'date'
+
 get %r|/latest/meta-data/iam/security-credentials/(.+)| do
   requester_roles.log_requester request
   if current_profile
     if params['captures'].first == current_role
+      data = JSON.pretty_generate credentials
       content_type 'text/json'
-      JSON.pretty_generate credentials
+      etag Zlib::crc32(data).to_s
+      last_modified DateTime.parse( credentials[:LastUpdated] )
+      data
     else
       status 404
     end
@@ -184,7 +191,7 @@ post '/authenticate' do
   end
   used_roles.unshift params[:role]
   # $stderr.puts command
-  if profile_auth[current_profile].empty? 
+  if not profile_auth.keys.include? current_profile or profile_auth[current_profile].empty? 
     command = "aws --profile #{Shellwords.escape current_profile} --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role #{mfa_str} --duration-seconds #{Shellwords.escape params[:duration]}"
     stdout, stderr, status = Open3.capture3( command )
   else
@@ -234,9 +241,15 @@ get '/' do
     erb :profile, { locals: { profiles: profiles } }
   else
     sort_roles.call()
-    erb :index, { locals: { requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles } }
+    erb :index, { locals: { requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
   end
 end
+
+get '/identity' do 
+  content_type "application/json"
+  `aws sts get-caller-identity`
+end
+
 
 get '/profile' do
   if current_profile
@@ -269,6 +282,7 @@ post '/profile' do
     e.message
   end
 end
+
 
 if settings.environment == :development
   

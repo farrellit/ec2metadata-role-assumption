@@ -13,12 +13,14 @@
 
 <div id='assumerole'>
 <form method='POST' action='/authenticate'>
+<!--
 <h2>Requesters</h2>
 <select name='requester'>
 <% requesters.each do |id,data| 
 %><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><% 
 end %>
 </select>
+-->
 <h2>Assume Role:</h2>
 <table>
   <tr>
@@ -29,8 +31,20 @@ end %>
     <% end %>
     </select></td>
   </tr>
+    <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+    <tr><td colspan=2 style='padding: 1em'>
+    <p><em>
+      Since an MFA token was entered at profile selection time, it needn't be 
+      entered here.  However, you're still free to do so if you like. 
+    </em>
+    </p>
+    <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
+    </p>
+    </td></tr>
+    <% end %>
   <tr>
-    <td>MFA Device</td>
+    <td>MFA Device
+    </td>
     <td>
       <select name='serial'>
       <% mfa_devices.each do |mfa_device|
@@ -47,12 +61,13 @@ end %>
   <tr><td>Duration</td>
   <td><input name='duration' value='1800'></input></td>
   </tr>
-  <tr><td rowspan='2'><input type='submit' value='Assume Role'></input></td></tr>
+  <tr><td rowspan='2'><input style="background-color: #ffafaf" type='submit' value='Assume Role'></input></td></tr>
 </table>
 </form>
 
 </div>
-<iframe src='/status'>
+<h3>Current Exposed Identity</h3>
+<iframe width='95%' src='/identity'>
 </iframe>
 
 </body>

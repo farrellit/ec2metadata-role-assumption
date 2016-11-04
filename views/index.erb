@@ -1,88 +1,104 @@
 <html>
 <head>
-<title>ec2metadata</title>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <title>ec2metadata</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="ec2metadata.css">
 </head>
 <body>
-<h1>ec2metadata</h1>
+<div class="container">
+  <nav class="navbar navbar-fixed-top navbar-inverse">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="/">ec2metadata</a>
+      </div>
+    </div>
+  </nav>
+  <p>Current profile: <code><%= current_profile %></code></p>
 
-<form method='POST' action='/profile'>
-<p>Current profile: <code><%= current_profile %></code></p>
-<input type='hidden' name='role' value=''></input>
-<input type='submit' value='Unset Profile'></input>
-</form>
+  <form method='POST' action='/profile'>
+  <input type='hidden' name='role' value=''></input>
+  <input type='submit' value='Unset Profile'></input>
+  </form>
 
-<div id='assumerole'>
-<form method='POST' action='/authenticate'>
-<!--
-<h2>Requesters</h2>
-<select name='requester'>
-<% requesters.each do |id,data|
-%><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><%
-end %>
-</select>
--->
-<h2>Assume Role:</h2>
-<table>
-  <tr>
-    <td>Role</td>
-    <td><input name='role' list='roles' style="width: 500px;">
-    <datalist id='roles'>
-    <% roles.each do |role|
-      %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
-    <% end %>
-    </datalist></td>
-  </tr>
-    <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-    <tr><td colspan=2 style='padding: 1em'>
-    <p><em>
-      Since an MFA token was entered at profile selection time, it needn't be
-      entered here.  However, you're still free to do so if you like.
-    </em>
-    </p>
-    <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
-    </p>
-    </td></tr>
-    <% end %>
-  <tr>
-    <td>MFA Device
-    </td>
-    <td>
-      <select name='serial' style="width: 500px;">
-      <% mfa_devices.each do |mfa_device|
-        %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
+  <div id='assumerole'>
+  <form method='POST' action='/authenticate'>
+  <!--
+  <h2>Requesters</h2>
+  <select name='requester'>
+  <% requesters.each do |id,data|
+  %><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><%
+  end %>
+  </select>
+  -->
+  <h2>Assume Role:</h2>
+  <table>
+    <tr>
+      <td>Role</td>
+      <td><input name='role' list='roles' style="width: 500px;">
+      <datalist id='roles'>
+      <% roles.each do |role|
+        %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
       <% end %>
-      </select>
-      <option>
-    </td>
-  </tr>
-  <tr><td>Duration</td>
-    <td><input name='duration' value='1800' style="width:150px;"></input></td>
-  </tr>
-  <tr>
-    <td>MFA Token</td>
-    <td><input type='number' name='mfa' style="width:150px;" ></input></td>
-  </tr>
-  <tr><td rowspan='2'><input style="background-color: #ffafaf" type='submit' value='Assume Role'></input></td></tr>
-</table>
-</form>
+      </datalist></td>
+    </tr>
+      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+      <tr><td colspan=2 style='padding: 1em'>
+      <p><em>
+        Since an MFA token was entered at profile selection time, it needn't be
+        entered here.  However, you're still free to do so if you like.
+      </em>
+      </p>
+      <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
+      </p>
+      </td></tr>
+      <% end %>
+    <tr>
+      <td>MFA Device
+      </td>
+      <td>
+        <select name='serial' style="width: 500px;">
+        <% mfa_devices.each do |mfa_device|
+          %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
+        <% end %>
+        </select>
+        <option>
+      </td>
+    </tr>
+    <tr><td>Duration</td>
+      <td><input name='duration' value='1800' style="width:150px;"></input></td>
+    </tr>
+    <tr>
+      <td>MFA Token</td>
+      <td><input type='number' name='mfa' style="width:150px;" ></input></td>
+    </tr>
+    <tr><td rowspan='2'><input style="background-color: #ffafaf" type='submit' value='Assume Role'></input></td></tr>
+  </table>
+  </form>
 
-</div>
-<% if current_role %>
-<h3>Current Role</h3>
-<% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-<p>Since your profile is MFA authenticated until <%=profile_auth[current_profile]['Expiration']=%>,
-you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically
-assume this role</a>. This provides some <a href='/using-config'>useful functionality</a>. </p>
-<% else %>
-<p>Provide MFA at profile selection time for additional options.</p>
-<% end %>
-<iframe width='95%' src='/latest/meta-data/iam/security-credentials/'>
-</iframe>
+  </div>
+    <% if current_role %>
+      <h3>Current Role</h3>
+      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+        <p>Since your profile is MFA authenticated until <%=profile_auth[current_profile]['Expiration']=%>,
+        you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically
+        assume this role</a>. This provides some <a href='/using-config'>useful functionality</a>. </p>
+      <% else %>
+        <p>Provide MFA at profile selection time for additional options.</p>
+      <% end %>
+      <iframe width='95%' src='/latest/meta-data/iam/security-credentials/'>
+      </iframe>
 
-<h3>Current Exposed Identity</h3>
-<p>This identity is straight from <kbd>aws sts get-caller-identity</kbd>.</p>
-<iframe width='95%' src='/identity'>
-</iframe>
-<% end %>
+      <h3>Current Exposed Identity</h3>
+      <p>This identity is straight from <kbd>aws sts get-caller-identity</kbd>.</p>
+      <iframe width='95%' src='/identity'>
+      </iframe>
+    <% end %>
+  </div>
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 </body>
 </html>

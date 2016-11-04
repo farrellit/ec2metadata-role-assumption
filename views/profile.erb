@@ -1,40 +1,54 @@
 <html>
 <head>
-<title>ec2metadata: profile selection</title>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ec2metadata: profile selection</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="ec2metadata.css">
 </head>
 <body>
-<h1>ec2metadata</h1>
-<p>ec2metadata supports multiple profiles which are discovered from <code>~/.aws/credentials</code>.  Select the profile here and it will be used to authorize future requets 
-listing and assuming the roles and discovering your MFA token's serial.
-</p>
- 
-<p>The profile's credentials are not exposed to consumers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
+  <nav class="navbar navbar-fixed-top navbar-inverse">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="/">ec2metadata</a>
+      </div>
+    </div>
+  </nav>
+  <div class="container">
+    <p>ec2metadata supports multiple profiles which are discovered from <code>~/.aws/credentials</code>.  Select the profile here and it will be used to authorize future requets
+    listing and assuming the roles and discovering your MFA token's serial.
+    </p>
+
+    <p>The profile's credentials are not exposed to consumers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
 
 
-<div id='assumerole'>
-<h2>Profile Selection</h2>
+    <div id='assumerole'>
+    <h2>Profile Selection</h2>
 
-<form method='POST' action='/profile'>
-<label for=profile>Profile:</label> <select name='profile' >
-    <% profiles.each do |profile| 
-      %><option value='<%= profile %>'><%= profile %></option>
-    <% end %>
-    <option value=''>Unset Profile</option>
-    </select>
-<p>If you enter MFA below, a session token for this profile can be used 
-in lieu of an MFA token for role assumption later.  This token can be good for 
-as much as one day (86400 seconds).
-</p>
-<p>
-MFA: <input type=number name='profile_mfa'></input>
-</p>
-<p>
-Duration (Seconds): <input type=number name='profile_mfa_time' value='86400'></input>
-</p>
-<p>
-<input type=submit>Select</input>
-</p>
-</form>
-
+    <form method='POST' action='/profile'>
+    <label for=profile>Profile:</label> <select name='profile' >
+        <% profiles.each do |profile|
+          %><option value='<%= profile %>'><%= profile %></option>
+        <% end %>
+        <option value=''>Unset Profile</option>
+        </select>
+    <p>If you enter MFA below, a session token for this profile can be used
+    in lieu of an MFA token for role assumption later.  This token can be good for
+    as much as one day (86400 seconds).
+    </p>
+    <p>
+    MFA: <input type=number name='profile_mfa'></input>
+    </p>
+    <p>
+    Duration (Seconds): <input type=number name='profile_mfa_time' value='86400'></input>
+    </p>
+    <p>
+    <input type=submit>Select</input>
+    </p>
+    </form>
+  </div>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 </body>
 </html>

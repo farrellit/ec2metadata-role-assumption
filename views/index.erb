@@ -21,17 +21,22 @@
     <div id='profilesect'>
     <h2>Profile Selection<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#profilecontent">&uarr;</button></h2>
     <div id='profile details'>
-    <p>Current profile: <code><%= current_profile %></code></p>
+    <p>Current profile: <code><%= profiles.current_profile %></code></p>
   
     <p>ec2metadata supports multiple profiles which are discovered from <code>~/.aws/credentials</code>.  Select the profile here and it will be used to authorize future requets
     listing and assuming the roles and discovering your MFA token's serial.
     </p>
 
     <p>The profile's credentials are not exposed to consumers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
+     
+    <form method='POST' action='/profiles/refresh'>
+      <input type='submit' value='Refresh profiles and roles'>
+    </form>
 
     <form method='POST' action='/profile'>
+    
     <label for=profile>Profile:</label> <select name='profile' >
-        <% profiles.each do |profile|
+        <% profiles.names.each do |profile|
           %><option value='<%= profile %>'><%= profile %></option>
         <% end %>
         <option value=''>Unset Profile</option>
@@ -59,16 +64,8 @@
 
   <div id='assumerole'>
   <form method='POST' action='/authenticate'>
-  <!--
-  <h2>Requesters</h2>
-  <select name='requester'>
-  <% requesters.each do |id,data|
-  %><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><%
-  end %>
-  </select>
-  -->
   <h2>Assume Role:</h2>
-  <% unless profiles and not profiles.empty? %>
+  <% if not profiles.current_profile %>
   <div><p><em>
     Since you don't have a profile chosen, you can't assume a role yet.
   </em></div></p>
@@ -78,16 +75,17 @@
       <td>Role</td>
       <td><input name='role' list='roles' style="width: 500px;" autocomplete="off">
       <datalist id='roles'>
-      <% roles.each do |role|
-        %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
-      <% end %>
+      <% if profiles.profile
+          profiles.profile.roles.each do |role|
+            %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
+      <%  end 
+        end 
+      %>
       </datalist></td>
     </tr>
-      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+      <% if profiles.profile and profiles.profile.credentials %>
       <tr><td colspan=2 style='padding: 1em'>
       <p><em> Since an MFA token was entered at profile selection time, it needn't be entered here.  However, you're still free to do so if you like.  </em></p>
-      <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
-      </p>
       </td></tr>
       <% end %>
     <tr>
@@ -95,9 +93,12 @@
       </td>
       <td>
         <select name='serial' style="width: 500px;">
-        <% mfa_devices.each do |mfa_device|
-          %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
-        <% end %>
+        <% if profiles.profile
+            profiles.profile.mfa_devices.each do |mfa_device|
+              %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
+        <% end 
+          end
+        %>
         </select>
         <option>
       </td>
@@ -114,11 +115,11 @@
   </form>
 
   </div>
-    <% if current_role %>
+    <% if profiles.profile %>
       <h3>Current Role</h3>
-      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-        <p>Since your profile is MFA authenticated until <%=profile_auth[current_profile]['Expiration']=%>,
-        you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically
+      <% if profiles.profile.credentials %>
+        <p>Since your profile is MFA authenticated until <%=profiles.profile.credentials['Expiration']=%>,
+        you can <a target='_blank' href='/config/<%= profiles.profile.current_role %>'>Generate an aws config which will automatically
         assume this role</a>. This provides some <a href='/using-config'>useful functionality</a>. </p>
       <% else %>
         <p>Provide MFA at profile selection time for additional options.</p>

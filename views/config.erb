@@ -3,5 +3,8 @@ aws_access_key_id=<%= profile_auth['AccessKeyId'] %>
 aws_secret_access_key=<%= profile_auth['SecretAccessKey'] %>
 aws_session_token=<%= profile_auth['SessionToken'] %>
 [default]
+<% if region %>
+region = <%= region %>
+<% end %>
 source_profile=X
 role_arn=<%= role %>

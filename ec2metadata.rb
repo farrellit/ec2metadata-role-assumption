@@ -11,8 +11,6 @@ region='us-east-1'
 
 profiles = []
 
-
-
 profile_path = "~/.aws/credentials"
 begin 
   profile_path = File.expand_path profile_path
@@ -31,6 +29,7 @@ aws_config.each_section do |section|
 end
 
 roles = []
+history = []
 mfa_devices =[]
 current_profile = nil
 
@@ -95,8 +94,8 @@ discover_profile_data = proc {  |mfa,mfa_exp|
       profile_auth[current_profile]=JSON.parse( authdata )['Credentials']
     end
     puts "Looking up roles"
-    role_regex=':role/(app|read|admin)'
-	  `aws iam --profile #{Shellwords.escape current_profile} --region us-east-1 list-roles --query *[*].[Arn] --output text | egrep '#{role_regex}'`.lines.each do |line|
+    # role_regex=':role/(app|read|admin)'
+	  `aws iam --profile #{Shellwords.escape current_profile} --region us-east-1 list-roles --query *[*].[Arn] --output text `.lines.each do |line|
 	    roles << line.strip
       puts line.strip
 	  end
@@ -255,12 +254,12 @@ post '/authenticate' do
 end
 
 get '/' do  
-  if current_profile == nil 
-    erb :profile, { locals: { profiles: profiles } }
-  else
+  #if current_profile == nil 
+  #  erb :profile, { locals: { profiles: profiles } }
+  #else
     sort_roles.call()
-    erb :index, { locals: { current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
-  end
+    erb :index, { locals: { profiles: profiles, current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
+  # end
 end
 
 get '/identity' do 

@@ -17,12 +17,45 @@
       </div>
     </div>
   </nav>
-  <p>Current profile: <code><%= current_profile %></code></p>
 
+    <div id='profilesect'>
+    <h2>Profile Selection<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#profilecontent">&uarr;</button></h2>
+    <div id='profile details'>
+    <p>Current profile: <code><%= current_profile %></code></p>
+  
+    <p>ec2metadata supports multiple profiles which are discovered from <code>~/.aws/credentials</code>.  Select the profile here and it will be used to authorize future requets
+    listing and assuming the roles and discovering your MFA token's serial.
+    </p>
+
+    <p>The profile's credentials are not exposed to consumers of the meta-data endpoints from AWS SDKs.  Only assumed roles are exposed to the applications.  </p>
+
+    <form method='POST' action='/profile'>
+    <label for=profile>Profile:</label> <select name='profile' >
+        <% profiles.each do |profile|
+          %><option value='<%= profile %>'><%= profile %></option>
+        <% end %>
+        <option value=''>Unset Profile</option>
+        </select>
+    <p>If you enter MFA below, a session token for this profile can be used
+    in lieu of an MFA token for role assumption later.  This token can be good for
+    as much as one day (86400 seconds).
+    </p>
+    <p>
+    MFA: <input type=number name='profile_mfa'></input>
+    </p>
+    <p>
+    Duration (Seconds): <input type=number name='profile_mfa_time' value='86400'></input>
+    </p>
+    <p>
+    <input type=submit>Select</input>
+    </p>
+    </form>
+  </div>
   <form method='POST' action='/profile'>
   <input type='hidden' name='role' value=''></input>
   <input type='submit' value='Unset Profile'></input>
   </form>
+  </div>
 
   <div id='assumerole'>
   <form method='POST' action='/authenticate'>
@@ -35,6 +68,11 @@
   </select>
   -->
   <h2>Assume Role:</h2>
+  <% unless profiles and not profiles.empty? %>
+  <div><p><em>
+    Since you don't have a profile chosen, you can't assume a role yet.
+  </em></div></p>
+  <% end %>
   <table>
     <tr>
       <td>Role</td>
@@ -47,11 +85,7 @@
     </tr>
       <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
       <tr><td colspan=2 style='padding: 1em'>
-      <p><em>
-        Since an MFA token was entered at profile selection time, it needn't be
-        entered here.  However, you're still free to do so if you like.
-      </em>
-      </p>
+      <p><em> Since an MFA token was entered at profile selection time, it needn't be entered here.  However, you're still free to do so if you like.  </em></p>
       <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
       </p>
       </td></tr>
@@ -99,6 +133,7 @@
     <% end %>
   </div>
   <!-- Latest compiled and minified JavaScript -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 </body>
 </html>

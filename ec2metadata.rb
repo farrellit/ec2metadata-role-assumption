@@ -1,4 +1,5 @@
 #require 'aws-sdk'
+require 'shellwords'
 require 'inifile'
 
 `which aws`
@@ -90,7 +91,7 @@ class Profile
       }
     end
     stdout, stderr, status = Open3.capture3( env, command )
-    result = { stdout: stdout, stderr: stderr, status: status }
+    result = { stdout: stdout, stderr: stderr, status: status, command: command }
     if status.exitstatus == 0
       @current_role = params[:role]
       @role_history.delete @current_role
@@ -166,18 +167,16 @@ class Profiles
       @profiles[name] = Profile.new( name, aws_config[name] )
       @profiles[name].discover_profile_data cache[name]
     end
-    cache
+    make_cache
   end
-  def cache
+  def make_cache
     cache = {}
     @profiles.each {|name,profile|
       puts "Caching #{name}"
       cache[name] = profile.make_cache
     }
-    cache = cache.to_json
-    puts cache
     File.open( "/tmp/ec2_roles.json", "w" ) do |f|
-      f.write(  cache.to_json ) 
+      f.write( cache.to_json ) 
     end
   end
   def current_role
@@ -196,7 +195,6 @@ require 'sinatra/reloader' if development?
 require 'sinatra/cookies'
 require 'tilt/erubis' 
 require 'json'
-require 'shellwords'
 require 'open3'
 
 set :bind, '0.0.0.0'
@@ -254,13 +252,14 @@ end
 post '/authenticate' do 
   if profiles.current_profile
     result = profiles.profile.assume_role params
-    if result['status'].exitstatus == 0 
-      status 200
-      content_type 'text/json'
-      redirect back, '[]' #, JSON.pretty_generate(result)
+    puts result
+    if result[:status].exitstatus == 0 
+        content_type 'text/json'
+        #redirect back, '[]' #, JSON.pretty_generate(result)
+        JSON.pretty_generate(result)
     else
-      status 500
       content_type 'text/html'
+      status 500
       "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
     end
   else

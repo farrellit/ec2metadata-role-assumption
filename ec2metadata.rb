@@ -170,7 +170,7 @@ end
 
 get %r|^/config/(.+)/?$| do
     content_type 'text/plain'
-    erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile] } }
+    erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile], region: params[:region] || nil  } }
 end
 
 get %r|/latest/meta-data/iam/security-credentials/(.+)| do
@@ -276,6 +276,25 @@ get '/profile' do
     "No current profile"
   end
 end 
+
+instance_id = nil
+post '/latest/meta-data/instance-id' do
+  request.body.rewind
+  instance_id = request.body.read 
+  if len(instance_id) == ''
+    instance_id = nil
+  end
+  status 204
+end
+get '/latest/meta-data/instance-id' do
+  if instance_id 
+    content_type 'text/plain'
+    instance_id.to_s
+  else
+    status 404
+  end
+end
+
 
 post '/profile' do
   begin 

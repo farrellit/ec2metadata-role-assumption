@@ -11,7 +11,9 @@ region='us-east-1'
 
 profiles = []
 
+refresh = false
 
+credentials = nil
 
 profile_path = "~/.aws/credentials"
 begin 
@@ -105,6 +107,67 @@ discover_profile_data = proc {  |mfa,mfa_exp|
 }
 current_role = nil
 
+do_assume_role = proc do |params|
+  if params[:mfa] =~ /^[0-9]+$/
+    mfa_str = "--serial-number #{Shellwords.escape params[:serial]} --token-code #{Shellwords.escape params[:mfa]}"
+  else
+    mfa_str = ""
+  end
+  if used_roles.include? params[:role]
+    used_roles.delete params[:role]
+  end
+  used_roles.unshift params[:role]
+  # $stderr.puts command
+  if not profile_auth.keys.include? current_profile or profile_auth[current_profile].empty? 
+    command = "aws --profile #{Shellwords.escape current_profile} --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role #{mfa_str} --duration-seconds #{Shellwords.escape params[:duration]}"
+    stdout, stderr, status = Open3.capture3( command )
+  else
+    command = "aws --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role --duration-seconds #{Shellwords.escape params[:duration]}"
+    stdout, stderr, status = Open3.capture3( 
+      { 
+        "AWS_SESSION_TOKEN"=>profile_auth[current_profile]['SessionToken'],
+        "AWS_ACCESS_KEY_ID"=>profile_auth[current_profile]['AccessKeyId'],
+        "AWS_SECRET_ACCESS_KEY"=>profile_auth[current_profile]['SecretAccessKey'],
+      },
+      command 
+    )
+  end
+  result = { stdout: stdout, stderr: stderr, status: status }
+  if status.exitstatus == 0 
+    data = JSON.parse(stdout)
+    result['data'] = data
+    credentials = {
+      Code: "Success", 
+      LastUpdated: Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+      Type: "AWS-HMAC",
+      AccessKeyId: data['Credentials']['AccessKeyId'], 
+      SecretAccessKey: data['Credentials']['SecretAccessKey'], 
+      Token: data['Credentials']['SessionToken'], 
+      Expiration: data['Credentials']['Expiration']
+    }
+    result['credentials'] = credentials
+    current_role = params[:role]
+  end
+  result
+end
+
+post '/authenticate' do 
+  if params['autorefresh'] == 'on'
+    refresh = true
+  else
+    refresh = false
+  end
+  result = do_assume_role[params]
+  if result[:status].exitstatus == 0 
+    content_type 'text/json'
+    redirect back, JSON.pretty_generate(result)
+  else
+    status 500
+    content_type 'text/html'
+    "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
+  end
+end
+
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'tilt/erubis' 
@@ -115,7 +178,6 @@ require 'open3'
 set :bind, '0.0.0.0'
 set :port, 4567
 
-credentials = nil
 
 class PerRequesterRoles 
   attr_accessor :requester_roles
@@ -177,11 +239,28 @@ get %r|/latest/meta-data/iam/security-credentials/(.+)| do
   requester_roles.log_requester request
   if current_profile
     if params['captures'].first == current_role
-      data = JSON.pretty_generate credentials
-      content_type 'text/json'
-      etag Zlib::crc32(data).to_s
-      last_modified DateTime.parse( credentials[:LastUpdated] )
-      data
+      if DateTime.parse(credentials[:Expiration]) <= DateTime.now
+        if refresh
+          puts do_assume_role.inspect
+          results = do_assume_role.call( { duration: 3600, role: current_role, mfa: nil } )
+          # provide credentials
+          data = JSON.pretty_generate credentials
+          content_type 'text/json'
+          etag Zlib::crc32(data).to_s
+          last_modified DateTime.parse( credentials[:LastUpdated] )
+          data
+        else
+          # credentials are expired
+          status 404
+        end
+      else
+        # provide credentials
+        data = JSON.pretty_generate credentials
+        content_type 'text/json'
+        etag Zlib::crc32(data).to_s
+        last_modified DateTime.parse( credentials[:LastUpdated] )
+        data
+      end
     else
       status 404
     end
@@ -196,62 +275,6 @@ get '/status' do
   status 200
   content_type 'text/json'
   JSON.pretty_generate :credentials=> credentials
-end
-
-post '/authenticate' do 
-  if params[:mfa] =~ /^[0-9]+$/
-    mfa_str = "--serial-number #{Shellwords.escape params[:serial]} --token-code #{Shellwords.escape params[:mfa]}"
-  else
-    mfa_str = ""
-  end
-  if used_roles.include? params[:role]
-    used_roles.delete params[:role]
-  end
-  used_roles.unshift params[:role]
-  # $stderr.puts command
-  if not profile_auth.keys.include? current_profile or profile_auth[current_profile].empty? 
-    command = "aws --profile #{Shellwords.escape current_profile} --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role #{mfa_str} --duration-seconds #{Shellwords.escape params[:duration]}"
-    stdout, stderr, status = Open3.capture3( command )
-  else
-    command = "aws --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role --duration-seconds #{Shellwords.escape params[:duration]}"
-    stdout, stderr, status = Open3.capture3( 
-      { 
-        "AWS_SESSION_TOKEN"=>profile_auth[current_profile]['SessionToken'],
-        "AWS_ACCESS_KEY_ID"=>profile_auth[current_profile]['AccessKeyId'],
-        "AWS_SECRET_ACCESS_KEY"=>profile_auth[current_profile]['SecretAccessKey'],
-      },
-      command 
-    )
-  end
-  result = { stdout: stdout, stderr: stderr, status: status }
-  if status.exitstatus == 0 
-    data = JSON.parse(stdout)
-    result['data'] = data
-    credentials = {
-      Code: "Success", 
-      LastUpdated: Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-      Type: "AWS-HMAC",
-      AccessKeyId: data['Credentials']['AccessKeyId'], 
-      SecretAccessKey: data['Credentials']['SecretAccessKey'], 
-      Token: data['Credentials']['SessionToken'], 
-      Expiration: data['Credentials']['Expiration']
-    }
-    if params.keys.include? :requester
-      requester_roles.requester_roles[params[:requester]][:credentials] = credentials
-      puts "Setting credentials for requester #{params[:requester]}"
-    else
-      puts "params: #{params.inspect}"
-    end
-    result['credentials'] = credentials
-    current_role = params[:role]
-    status 200
-    content_type 'text/json'
-    redirect back, JSON.pretty_generate(result)
-  else
-    status 500
-    content_type 'text/html'
-    "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
-  end
 end
 
 get '/' do  
@@ -322,6 +345,12 @@ end
 
 if settings.environment == :development
   
+  post "/expire" do
+    credentials[:Expiration] = Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+    content_type "text/plain"
+    "Credentials expire \"now\": #{credentials[:Expiration]}"
+  end
+
   get '/debug/profile_auth' do
       command= "aws sts get-caller-identity"
       begin

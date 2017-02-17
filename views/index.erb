@@ -45,18 +45,6 @@
       <% end %>
       </datalist></td>
     </tr>
-      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-      <tr><td colspan=2 style='padding: 1em'>
-      <p><em>
-        Since an MFA token was entered at profile selection time, it needn't be
-        entered here.  However, you're still free to do so if you like.
-      </em>
-      </p>
-      <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
-      </p>
-      </td></tr>
-      <% end %>
-    <tr>
       <td>MFA Device
       </td>
       <td>
@@ -73,7 +61,28 @@
     </tr>
     <tr>
       <td>MFA Token</td>
-      <td><input type='number' name='mfa' style="width:150px;" ></input></td>
+      <td><input type='number' name='mfa' style="width:150px;" ></input>
+      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+      <p><em>
+        Since an MFA token was entered at profile selection time, it needn't be
+        entered here.  However, you're still free to do so if you like.
+      </em>
+      </p>
+      <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
+      </p>
+    <% end %>
+    </td>
+    <tr>
+    </tr>
+    <tr>
+      <td>Auto-Refresh Credentials</td>
+      <td>
+        <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
+        <input type='checkbox' name='autorefresh' title="check to enable auto-refreshing of the role when it exipres" /> 
+        <% else %>
+          <em>Proved an MFA token at profile selection time to allow auto-refreshing credentials</em>
+        <% end %>
+      </td>
     </tr>
     <tr><td rowspan='2'><input style="background-color: #ffafaf" type='submit' value='Assume Role'></input></td></tr>
   </table>

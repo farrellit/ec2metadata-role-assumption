@@ -1,4 +1,4 @@
-#require 'aws-sdk'
+#\ require 'aws-sdk'
 
 `which aws`
 unless $?.exitstatus == 0
@@ -151,22 +151,6 @@ do_assume_role = proc do |params|
   result
 end
 
-post '/authenticate' do 
-  if params['autorefresh'] == 'on'
-    refresh = true
-  else
-    refresh = false
-  end
-  result = do_assume_role[params]
-  if result[:status].exitstatus == 0 
-    content_type 'text/json'
-    redirect back, JSON.pretty_generate(result)
-  else
-    status 500
-    content_type 'text/html'
-    "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
-  end
-end
 
 require 'sinatra'
 require 'sinatra/reloader' if development?
@@ -230,6 +214,22 @@ get %r|^/config/current$| do
     end
 end
 
+post '/authenticate' do 
+  if params['autorefresh'] == 'on'
+    refresh = true
+  else
+    refresh = false
+  end
+  result = do_assume_role[params]
+  if result[:status].exitstatus == 0 
+    content_type 'text/json'
+    redirect back, JSON.pretty_generate(result)
+  else
+    status 500
+    content_type 'text/html'
+    "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
+  end
+end
 get %r|^/config/(.+)/?$| do
     content_type 'text/plain'
     erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile], region: params[:region] || nil  } }

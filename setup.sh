@@ -3,7 +3,8 @@
 LOCALIP='169.254.169.254'
 OS=$(uname -s)
 
-grep -F "$LOCALIP localhost" /etc/hosts || echo "$LOCALIP localhost" | sudo tee -a /etc/hosts
+# not sure if this is really required or a good idea
+# grep -F "$LOCALIP localhost" /etc/hosts || echo "$LOCALIP localhost" | sudo tee -a /etc/hosts
 
 if [ "$OS" == "Darwin" ] ; then
   # From http://apple.stackexchange.com/questions/230300/what-is-the-modern-way-to-do-port-forwarding-on-el-capitan-forward-port-80-to

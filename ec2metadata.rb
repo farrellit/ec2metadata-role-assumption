@@ -81,7 +81,7 @@ class ProfileAuthException < RuntimeError; end
 
 profile_auth = Hash.new
 
-discover_profile_data = proc {  |mfa,mfa_exp|
+discover_profile_data = proc {  |mfa,mfa_exp,list_roles|
 	roles = []
   used_roles = []
   profile_auth[current_profile] = {}  if not profile_auth.keys.include? current_profile 
@@ -96,13 +96,18 @@ discover_profile_data = proc {  |mfa,mfa_exp|
       raise ProfileAuthException, "#{profile_auth} #{stderr}" unless status == 0
       profile_auth[current_profile]=JSON.parse( authdata )['Credentials']
     end
-    puts "Looking up roles"
-    role_regex=':role/(app|read|admin)'
-	  `aws iam --profile #{Shellwords.escape current_profile} --region us-east-1 list-roles --query *[*].[Arn] --output text | egrep '#{role_regex}'`.lines.each do |line|
-	    roles << line.strip
-      puts line.strip
-	  end
-    sort_roles.call()
+    if list_roles
+      puts "Looking up roles"
+      role_regex=':role/(app|read|admin)'
+	    `aws iam --profile #{Shellwords.escape current_profile} --region us-east-1 list-roles --query *[*].[Arn] --output text | egrep '#{role_regex}'`.lines.each do |line|
+	      roles << line.strip
+        puts line.strip
+	    end
+      sort_roles.call()
+    else
+      puts "Not looking up roles"
+      roles = []
+    end
   end
 }
 current_role = nil
@@ -232,6 +237,7 @@ post '/authenticate' do
 end
 get %r|^/config/(.+)/?$| do
     content_type 'text/plain'
+    region = params['region'] 
     erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile], region: params[:region] || nil  } }
 end
 
@@ -324,12 +330,12 @@ post '/profile' do
   if params[:profile] == "" or params[:profile] == nil
     current_profile = nil
     current_role = nil
-    discover_profile_data.call( nil, nil )
+    discover_profile_data.call( nil, nil, false )
     redirect '/', 303 
   elsif profiles.include? params[:profile]
     puts params.inspect
     current_profile = params[:profile]
-    discover_profile_data.call( params[:profile_mfa], params[:profile_mfa_time] )
+    discover_profile_data.call( params[:profile_mfa], params[:profile_mfa_time], ( params[:listroles] == 'on') )
     redirect '/', 303 
   else
     status 404

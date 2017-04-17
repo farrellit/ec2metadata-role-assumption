@@ -6,5 +6,5 @@ develop:
 up: build
 	docker run -e RACK_ENV=production -it --rm -p 127.0.0.1:8009:4567 -v `ls -d ~/.aws`:/root/.aws ec2metadata
 
-make daemon:
+make daemon: build
 	docker run -e RACK_ENV=production --rm -d -p 127.0.0.1:8009:4567 -v `ls -d ~/.aws`:/root/.aws ec2metadata

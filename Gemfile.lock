@@ -2,6 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     backports (3.6.8)
+    curb (0.9.3)
     erubis (2.7.0)
     inifile (3.0.0)
     multi_json (1.12.1)
@@ -27,10 +28,11 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  curb
   erubis
   inifile
   sinatra
   sinatra-contrib
 
 BUNDLED WITH
-   1.13.1
+   1.13.7

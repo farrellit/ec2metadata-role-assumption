@@ -1,4 +1,4 @@
-#\ require 'aws-sdk'
+# require 'aws-sdk'
 
 `which aws`
 unless $?.exitstatus == 0
@@ -158,6 +158,7 @@ end
 
 
 require 'sinatra'
+require 'curb'
 require 'sinatra/reloader' if development?
 require 'tilt/erubis' 
 require 'json'
@@ -285,10 +286,12 @@ end
 
 get '/' do  
   if current_profile == nil 
-    erb :profile, { locals: { profiles: profiles } }
+    erb :main do 
+      erb :profile, locals: { profiles: profiles } 
+    end
   else
     sort_roles.call()
-    erb :index, { locals: { current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
+    erb :index, { layout: :main, locals: { current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
   end
 end
 
@@ -392,3 +395,34 @@ if settings.environment == :development
   end
   
 end
+
+  get '/ping' do
+    status 200
+    content_type 'text/plain'
+    "pong"
+  end
+
+  get '/check' do
+    checks = {}
+    c = Curl::Easy.new('http://169.254.169.254/ping')
+    c.timeout = 1
+    content_type 'text/html'
+    check = {}
+    begin
+      c.http_get
+      check['passed'] = true
+    rescue Curl::Err::CurlError
+      check['passed'] = false
+    end
+    checks['metadata_ip'] = check
+    full_result = nil
+    if checks.reject {|name,results| results['passed'] }.length == 0
+      status 200
+      full_result = true
+    else
+      full_result = false
+      status 500
+    end
+    erb :check, locals: { full_result: full_result, checks: checks }
+  end
+

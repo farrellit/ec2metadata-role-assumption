@@ -1,0 +1,14 @@
+<div class='checks'>
+  <% unless checks['metadata_ip']['passed'] %>
+  <div class='checkfail'>
+    <h4><em>Metadata IP Address check failed.</em></h4>
+    <p>While the webiste will still function, the roles you assume will not be automatically exposed to SDKs running within your local host or its virtual machines.  </p>
+    <p>To solve this issue, run the setup script <code>./setup.sh</code>.  You do not need to restart the application for this change to take effect.</p>
+  </div>
+  <% else %>
+  <div class='checkpass'>
+    <h4><em>Metadata IP Address check passed.</em></h4>
+    <p>SDKs running within the local host or its virtual machines will be able to access the credentials for any role you assume.</p>
+  </div>
+  <% end %>
+</div>

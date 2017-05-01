@@ -13,7 +13,7 @@ Configuring the ec2 metadata endpoint requires superuser privileges to create th
 
 # Quick Start
 
-Ensure that `~/.aws/credentials` holds your IAM profiles with keys and secrets.  
+Ensure that `~/.aws/credentials` holds your IAM profiles with keys and secrets. 
 
 ```
 ./setup.sh
@@ -32,6 +32,18 @@ This repo is now in dockerhub!  https://hub.docker.com/r/farrellit/ec2metadata/ 
 
 The program expects to find credentials in either `~/.aws/credentials` or `/code/.aws/credentials` (useful in docker). You choose the profile in the application.
 
+To set up an access key, login to aws, go to Services->IAM->Users and click "create access key"
+Use your editor of choice to paste your key and key_id. Make up an account name for each key pair you use. 
+
+(*Q for Dan: Does your region have to match the region of your resources in the app that you want to assume the role of?)  
+
+```
+[acount_name]
+aws_access_key_id = paste your key id here without quotes
+aws_secret_access_key = paste your key here without quotes
+output = json
+region = us-east-1
+```
 
 ## Invocation
 
@@ -44,10 +56,35 @@ Before beginning, run `setup.sh`. This will create the `iptables`/`pfctl` rules 
 
 The metadata service is the _lowest_ priority in the order of precedence. This means that if you have a `default` profile in the `.aws` configurations exposed to an applicaiton, this will _override_ the metadata service.  
 
-If the clock is off, the metadtaservice won't work, and the webiste doesn't currently make this as clear as it should.  This is unlikely on linux as the system time is used, but in Docker for Mac, and maybe Docker for Windows, the underlying virtual machine clock has a tendency to drift.  This command uses ntp to fix the clock: 
+If the clock is off, the metadtaservice won't work, and the website doesn't currently make this as clear as it should.  This is unlikely on linux as the system time is used, but in Docker for Mac, and maybe Docker for Windows, the underlying virtual machine clock has a tendency to drift.  This command uses ntp to fix the clock: 
 
 ```
 docker run -it --rm --privileged --pid=host debian nsenter -t 1 -m -i sh -c "ntpd -q -n -p pool.ntp.org"
+```
+
+This may happen frequently enough that you may want to add a shell script to your path to execute
+this command without looking it up.
+
+To do this, make a folder:
+
+```
+$ mkdir bin
+$ cd bin
+$ nano fix_docker_time.sh
+```
+
+and paste in the above docker command
+
+then add ~/bin to your path:
+
+```
+$ nano ~/.bash_profile
+```
+
+and paste at the end of the file:
+
+```
+export PATH="$PATH:~/bin"
 ```
 
 ### Config writer service

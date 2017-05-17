@@ -13,11 +13,10 @@ Configuring the ec2 metadata endpoint requires superuser privileges to create th
 
 # Quick Start
 
-Ensure that `~/.aws/credentials` holds your IAM profiles with keys and secrets.  
-
+Ensure that `~/.aws/credentials` holds your IAM profiles with keys and secrets.   **See note about the default profile**
 ```
 ./setup.sh
-make
+make daemon
 ```
 
 Now, go to http://169.254.169.254 to select a profile and start assuming roles.
@@ -32,7 +31,6 @@ This repo is now in dockerhub!  https://hub.docker.com/r/farrellit/ec2metadata/ 
 
 The program expects to find credentials in either `~/.aws/credentials` or `/code/.aws/credentials` (useful in docker). You choose the profile in the application.
 
-
 ## Invocation
 
 ### Metadata Service on 169.254.169.254
@@ -42,13 +40,19 @@ Before beginning, run `setup.sh`. This will create the `iptables`/`pfctl` rules 
 
 #### Metadata service caveats
 
+##### `default` profile supercedes metadata service
+
 The metadata service is the _lowest_ priority in the order of precedence. This means that if you have a `default` profile in the `.aws` configurations exposed to an applicaiton, this will _override_ the metadata service.  
+
+You can still use the application anywhere that doesn't expose `~/.aws` - for example docker containers or virtual machines - but it won't show the assumed role in `aws sts get-caller-identity` from the ec2 metadata service ( which uses `~/.aws` itself to generate session tokens) or from your local machine.  I recommend naming each profile something _other_ than default if you use multiple accounts, and just specifying the correct profile for `aws` commands with `--profile`. 
 
 If the clock is off, the metadtaservice won't work, and the webiste doesn't currently make this as clear as it should.  This is unlikely on linux as the system time is used, but in Docker for Mac, and maybe Docker for Windows, the underlying virtual machine clock has a tendency to drift.  This command uses ntp to fix the clock: 
 
 ```
 docker run -it --rm --privileged --pid=host debian nsenter -t 1 -m -i sh -c "ntpd -q -n -p pool.ntp.org"
 ```
+
+
 
 ### Config writer service
 

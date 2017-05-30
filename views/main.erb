@@ -10,17 +10,43 @@
   <!-- jquery for status checks -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script>
+  function getSeconds() {
+    var currentDate = new Date();
+    var totalSeconds = 0;
+    totalSeconds += currentDate.getSeconds();
+    totalSeconds += 60*(currentDate.getMinutes());
+    totalSeconds += 60*60*(currentDate.getHours());
+    return totalSeconds;
+  }
+  function getLocalTime() {
+    var curr = new Date();
+    return curr.getHours() + ":" + curr.getMinutes() + ":" + curr.getSeconds();
+  }
   $(document).ready(function(){
-    $.ajax( 
+    $.ajax(
       '/check', {
         success: function(data,stat,xhr) {
           // alert("Success " + stat)
         },
         error: function(data,stat,xhr) {
-          $('div.container').first().prepend(data.responseText) 
+          $('div.container').first().prepend(data.responseText)
         }
       }
-    )
+    );
+
+    var other_time = <%= getRTimeSec() %>;
+    var time_difference = Math.abs(other_time - getSeconds());
+    if (time_difference > 10) {
+      var local_t = getLocalTime();
+      var server_t = <%= getServerTime() %>;
+      $('div.container').first().prepend(
+        "<div class='checkfail'>\
+          <h4><em>Times do not match.</em></h4>\
+          <p>Local Time: " + local_t + ".<br/>Server Time: " + server_t + ".</p>\
+          <p>Mismatch of " + time_difference + " seconds.</p>\
+        </div>"
+      )
+    }
   })
   </script>
 </head>

@@ -402,6 +402,12 @@ end
     "pong"
   end
 
+  get '/time' do
+    status 200
+    content_type 'text/plain'
+    "#{getRTimeSec()}\n"
+  end
+
   get '/check' do
     checks = {}
     c = Curl::Easy.new('http://169.254.169.254/ping')
@@ -428,15 +434,6 @@ end
 
 
 def getRTimeSec
-  require 'date'
-  t = Time.now
-  totalSeconds = t.sec
-  totalSeconds += 60*t.min
-  totalSeconds += 60*60*t.hour
-  return totalSeconds
-end
-
-def getServerTime
-  time = Time.now.strftime("'%H:%M:%S'")
-  return time
+  # Return number of seconds since Jan 1, 1970 in UTC
+  return Time.now.utc.to_i
 end

@@ -11,43 +11,47 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script>
   function getSeconds() {
-    var currentDate = new Date();
-    var totalSeconds = 0;
-    totalSeconds += currentDate.getSeconds();
-    totalSeconds += 60*(currentDate.getMinutes());
-    totalSeconds += 60*60*(currentDate.getHours());
-    return totalSeconds;
+    // Get the number of seconds since Jan 1, 1970 in UTC
+    return Math.floor(new Date().getTime() / 1000,0); // conversion from ms to s
   }
-  function getLocalTime() {
-    var curr = new Date();
-    return curr.getHours() + ":" + curr.getMinutes() + ":" + curr.getSeconds();
-  }
-  $(document).ready(function(){
+  function periodicTesing() {
     $.ajax(
       '/check', {
         success: function(data,stat,xhr) {
           // alert("Success " + stat)
         },
         error: function(data,stat,xhr) {
-          $('div.container').first().prepend(data.responseText)
+          if ($('div.container .checks').length==0) {
+            $('div.container').first().prepend(data.responseText);
+          }
         }
       }
     );
+    $.ajax({
+      url: "/time",
+      success: function(data) {
+        var time_difference = Math.abs(getSeconds() - data);
+        if (time_difference >= 10) {
+          if ($('div.container .timecheck').length==0) {
+            $('div.container').first().prepend(
+              "<div class='timecheck'>\
+                <div class='checkfail'>\
+                  <h4><em>Times do not match.</em></h4>\
+                  <p>Mismatch of " + time_difference + " seconds.</p>\
+                  <p>Please compare local UTC with server UTC.</p>\
+                </div>\
+              </div>"
+            )}
+          }
+      }
+    });
+  }
 
-    var other_time = <%= getRTimeSec() %>;
-    var time_difference = Math.abs(other_time - getSeconds());
-    if (time_difference > 10) {
-      var local_t = getLocalTime();
-      var server_t = <%= getServerTime() %>;
-      $('div.container').first().prepend(
-        "<div class='checkfail'>\
-          <h4><em>Times do not match.</em></h4>\
-          <p>Local Time: " + local_t + ".<br/>Server Time: " + server_t + ".</p>\
-          <p>Mismatch of " + time_difference + " seconds.</p>\
-        </div>"
-      )
-    }
-  })
+  $(document).ready(function(){
+    periodicTesing();
+    setInterval(periodicTesing, 10000);
+  });
+
   </script>
 </head>
 <body>

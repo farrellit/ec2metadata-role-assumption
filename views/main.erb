@@ -10,18 +10,51 @@
   <!-- jquery for status checks -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <script>
-  $(document).ready(function(){
-    $.ajax( 
+  function getSeconds() {
+    // Get the number of seconds since Jan 1, 1970 in UTC
+    return Math.floor(new Date().getTime() / 1000,0); // conversion from ms to s
+  }
+  function periodicTesing() {
+    $.ajax(
       '/check', {
         success: function(data,stat,xhr) {
-          // alert("Success " + stat)
+          if ($('div.container .checks').length!=0) {
+            $('div.container .checks').remove();
+          }
         },
         error: function(data,stat,xhr) {
-          $('div.container').first().prepend(data.responseText) 
+          if ($('div.container .checks').length==0) {
+            $('div.container').first().prepend(data.responseText);
+          }
         }
       }
-    )
-  })
+    );
+    $.ajax({
+      url: "/time",
+      success: function(data) {
+        var time_difference = Math.abs(getSeconds() - data);
+        $('div.container .timecheck').remove();
+        if (time_difference >= 10) { 
+          $('div.container').first().prepend(
+            "<div class='timecheck'>\
+              <div class='checkfail'>\
+                <h4><em>Times do not match.</em></h4>\
+                <p>Mismatch of " + time_difference + " seconds between server and local UTC.</p>\
+                <p>To correct time of docker host, please run:\
+                <code>docker run -it --rm --privileged --pid=host debian nsenter -t 1 -m -i sh -c 'ntpd -q -n -p pool.ntp.org'</code></p>\
+              </div>\
+            </div>"
+          )
+        }
+      }
+    });
+  }
+
+  $(document).ready(function(){
+    periodicTesing();
+    setInterval(periodicTesing, 5000);
+  });
+
   </script>
 </head>
 <body>

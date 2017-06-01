@@ -16,7 +16,7 @@ refresh = false
 credentials = nil
 
 profile_path = "~/.aws/credentials"
-begin 
+begin
   profile_path = File.expand_path profile_path
 rescue ArgumentError=>e # docker container maybe?
   profile_path = "/code/.aws/credentials"
@@ -25,7 +25,7 @@ end
 
 require 'inifile'
 aws_config = IniFile.load( profile_path )
-aws_config.each_section do |section| 
+aws_config.each_section do |section|
   required_fields = %w[ aws_access_key_id aws_secret_access_key ]
   if (aws_config[section].keys & required_fields ).length == required_fields.length
     profiles  << section
@@ -38,7 +38,7 @@ current_profile = nil
 
 used_roles = []
 
-sort_roles = proc { 
+sort_roles = proc {
 	  roles.sort! do |a,b|
       #$stderr.puts "Comparing:\n\t* #{a}\n\t* #{b}"
       res = nil
@@ -68,9 +68,9 @@ sort_roles = proc {
 	        elsif b =~ r  # b comes first
 	          #$stderr.puts "#{b} matches #{r}"
 	          res = -1
-	        end  
+	        end
 	        break if res # we have a solution if this is the case
-	      end 
+	      end
 	      end
 	    res = a<=>b unless res # didn't match anything
       res
@@ -84,7 +84,7 @@ profile_auth = Hash.new
 discover_profile_data = proc {  |mfa,mfa_exp,list_roles|
 	roles = []
   used_roles = []
-  profile_auth[current_profile] = {}  if not profile_auth.keys.include? current_profile 
+  profile_auth[current_profile] = {}  if not profile_auth.keys.include? current_profile
 	mfa_devices =[]
   if current_profile
 	  `aws --region us-east-1 --profile #{Shellwords.escape current_profile} iam list-mfa-devices --query MFADevices[*].SerialNumber --output text`.each_line do |line|
@@ -123,31 +123,31 @@ do_assume_role = proc do |params|
   end
   used_roles.unshift params[:role]
   # $stderr.puts command
-  if not profile_auth.keys.include? current_profile or profile_auth[current_profile].empty? 
+  if not profile_auth.keys.include? current_profile or profile_auth[current_profile].empty?
     command = "aws --profile #{Shellwords.escape current_profile} --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role #{mfa_str} --duration-seconds #{Shellwords.escape params[:duration]}"
     stdout, stderr, status = Open3.capture3( command )
   else
     command = "aws --region us-east-1 sts assume-role --role-arn #{Shellwords.escape params[:role]} --role-session-name assumed-role --duration-seconds #{Shellwords.escape params[:duration]}"
-    stdout, stderr, status = Open3.capture3( 
-      { 
+    stdout, stderr, status = Open3.capture3(
+      {
         "AWS_SESSION_TOKEN"=>profile_auth[current_profile]['SessionToken'],
         "AWS_ACCESS_KEY_ID"=>profile_auth[current_profile]['AccessKeyId'],
         "AWS_SECRET_ACCESS_KEY"=>profile_auth[current_profile]['SecretAccessKey'],
       },
-      command 
+      command
     )
   end
   result = { stdout: stdout, stderr: stderr, status: status }
-  if status.exitstatus == 0 
+  if status.exitstatus == 0
     data = JSON.parse(stdout)
     result['data'] = data
     credentials = {
-      Code: "Success", 
+      Code: "Success",
       LastUpdated: Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
       Type: "AWS-HMAC",
-      AccessKeyId: data['Credentials']['AccessKeyId'], 
-      SecretAccessKey: data['Credentials']['SecretAccessKey'], 
-      Token: data['Credentials']['SessionToken'], 
+      AccessKeyId: data['Credentials']['AccessKeyId'],
+      SecretAccessKey: data['Credentials']['SecretAccessKey'],
+      Token: data['Credentials']['SessionToken'],
       Expiration: data['Credentials']['Expiration']
     }
     result['credentials'] = credentials
@@ -160,7 +160,7 @@ end
 require 'sinatra'
 require 'curb'
 require 'sinatra/reloader' if development?
-require 'tilt/erubis' 
+require 'tilt/erubis'
 require 'json'
 require 'shellwords'
 require 'open3'
@@ -169,7 +169,7 @@ set :bind, '0.0.0.0'
 set :port, 4567
 
 
-class PerRequesterRoles 
+class PerRequesterRoles
   attr_accessor :requester_roles
   def initialize
     @requester_roles = {}
@@ -187,7 +187,7 @@ class PerRequesterRoles
       @requester_roles[requester_id] = { requests: 1 }
     end
     return requester_id
-  end  
+  end
 
 
   def dump_json
@@ -196,38 +196,38 @@ class PerRequesterRoles
 
 end
 
-requester_roles = PerRequesterRoles.new 
+requester_roles = PerRequesterRoles.new
 
 get %r|/latest/meta-data/iam/security-credentials/?$| do
  requester_roles.log_requester request
  if current_profile
     if current_role
       current_role
-    end 
+    end
   end
 end
 
 #require 'digest/sha1' # crc should be faster!
-require 'zlib' 
+require 'zlib'
 require 'date'
 
-get %r|^/config/current$| do 
+get %r|^/config/current$| do
     if current_role
-    redirect "/config/#{current_role}", 303 
+    redirect "/config/#{current_role}", 303
     else
     status 404
     "No role is set"
     end
 end
 
-post '/authenticate' do 
+post '/authenticate' do
   if params['autorefresh'] == 'on'
     refresh = true
   else
     refresh = false
   end
   result = do_assume_role[params]
-  if result[:status].exitstatus == 0 
+  if result[:status].exitstatus == 0
     content_type 'text/json'
     redirect back, JSON.pretty_generate(result)
   else
@@ -238,7 +238,7 @@ post '/authenticate' do
 end
 get %r|^/config/(.+)/?$| do
     content_type 'text/plain'
-    region = params['region'] 
+    region = params['region']
     erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile], region: params[:region] || nil  } }
 end
 
@@ -274,7 +274,7 @@ get %r|/latest/meta-data/iam/security-credentials/(.+)| do
   end
 end
 
-get '/using-config' do 
+get '/using-config' do
   erb :using_config
 end
 
@@ -284,10 +284,10 @@ get '/status' do
   JSON.pretty_generate :credentials=> credentials
 end
 
-get '/' do  
-  if current_profile == nil 
-    erb :main do 
-      erb :profile, locals: { profiles: profiles } 
+get '/' do
+  if current_profile == nil
+    erb :main do
+      erb :profile, locals: { profiles: profiles }
     end
   else
     sort_roles.call()
@@ -295,7 +295,7 @@ get '/' do
   end
 end
 
-get '/identity' do 
+get '/identity' do
   content_type "application/json"
   `aws sts get-caller-identity`
 end
@@ -307,19 +307,19 @@ get '/profile' do
     status 404
     "No current profile"
   end
-end 
+end
 
 instance_id = nil
 post '/latest/meta-data/instance-id' do
   request.body.rewind
-  instance_id = request.body.read 
+  instance_id = request.body.read
   if len(instance_id) == ''
     instance_id = nil
   end
   status 204
 end
 get '/latest/meta-data/instance-id' do
-  if instance_id 
+  if instance_id
     content_type 'text/plain'
     instance_id.to_s
   else
@@ -329,17 +329,17 @@ end
 
 
 post '/profile' do
-  begin 
+  begin
   if params[:profile] == "" or params[:profile] == nil
     current_profile = nil
     current_role = nil
     discover_profile_data.call( nil, nil, false )
-    redirect '/', 303 
+    redirect '/', 303
   elsif profiles.include? params[:profile]
     puts params.inspect
     current_profile = params[:profile]
     discover_profile_data.call( params[:profile_mfa], params[:profile_mfa_time], ( params[:listroles] == 'on') )
-    redirect '/', 303 
+    redirect '/', 303
   else
     status 404
     "Couldn't change profile: no such profile '#{params[:profile]}'"
@@ -353,7 +353,7 @@ end
 
 
 if settings.environment == :development
-  
+
   post "/expire" do
     credentials[:Expiration] = Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     content_type "text/plain"
@@ -379,27 +379,33 @@ if settings.environment == :development
       content_type "text/json"
       JSON.pretty_generate( { stdout: stdout, stderr: stderr, status: status } )
   end
-  
+
   get '/debug' do
       sort_roles.call()
     { :mfa_devices => mfa_devices,  :roles => roles, credentials: credentials, current_role: current_role, profile_auth: profile_auth }.to_json
   end
-  
+
   get '/debug/used_roles' do
     content_type 'text/json'
     JSON.pretty_generate( { used_roles: used_roles } )
   end
-  
-  get '/debug/requesters' do 
+
+  get '/debug/requesters' do
     requester_roles.dump_json
   end
-  
+
 end
 
   get '/ping' do
     status 200
     content_type 'text/plain'
     "pong"
+  end
+
+  get '/time' do
+    status 200
+    content_type 'text/plain'
+    "#{getRTimeSec()}\n"
   end
 
   get '/check' do
@@ -426,3 +432,8 @@ end
     erb :check, locals: { full_result: full_result, checks: checks }
   end
 
+
+def getRTimeSec
+  # Return number of seconds since Jan 1, 1970 in UTC
+  return Time.now.utc.to_i
+end

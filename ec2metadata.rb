@@ -313,7 +313,7 @@ instance_id = nil
 post '/latest/meta-data/instance-id' do
   request.body.rewind
   instance_id = request.body.read 
-  if len(instance_id) == ''
+  if instance_id.length == ''
     instance_id = nil
   end
   status 204

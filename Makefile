@@ -19,4 +19,3 @@ build:
 
 develop:  build
 	docker run -it --rm --name=$(NAME) -p 8009:4567 -v `pwd`:/code -v `ls -d ~/.aws`:/root/.aws ec2metadata
-

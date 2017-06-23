@@ -6,6 +6,8 @@ up:
 daemon: 
 	docker run -e RACK_ENV=production --rm -d --name=$(NAME) -p 127.0.0.1:8009:4567 -v `ls -d ~/.aws`:/root/.aws farrellit/ec2metadata:latest
 
+pull:
+	docker pull farrellit/ec2metadata:latest
 
 # obviously, this is only for farrellit
 publish:

@@ -101,3 +101,25 @@ In this case I assume the `arn:aws:iam::122377349983:role/nothing` role.  This d
 ```
 
 I typically add commands such as these to a Makefile that specifies the role appropriate for the application.  
+
+### Arbitrary metadata
+
+If you are on a non-EC2 instance developing an application that interacts with the EC2 metadata service's many endpoints ( for example, subnet discovery ,VPC discovery ,etc ), you may find it convenient to be able to set arbitrary parts of the metadata to user-supplied values.  There is a route to support this; anything posted to `/latest/meta-data/<key>` will be available on `/latest/meta-data/<key>` with subsequent GETs.  So you can set, for example, an instance ID or a VPC ID or a Subnet ID, whatever you like.  There is no validation that the URL be extant in the _real_ ec2 metadata service; it just saves and returns.  Observe:
+
+```
+$  curl localhost:8009/latest/meta-data/instance-id -X POST --data  "i-1234567890abcdef"
+
+$  curl localhost:8009/latest/meta-data/instance-id
+i-1234567890abcdef
+
+$ curl localhost:8009/latest/meta-data
+{
+  "instance-id": "i-1234567890abcdef"
+}
+
+$  curl localhost:8009/latest/meta-data/instance-id -X POST --data  "" # empty string
+
+$ curl localhost:8009/latest/meta-data
+{
+}
+```

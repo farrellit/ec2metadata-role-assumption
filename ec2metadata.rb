@@ -309,24 +309,35 @@ get '/profile' do
   end
 end 
 
-instance_id = nil
-post '/latest/meta-data/instance-id' do
+# generic metadata interface.  Post in what you want, then you can get it back just like 
+# on an instance.  
+meta_data = {}
+get '/latest/meta-data' do
+  content_type 'text/json'
+  JSON.pretty_generate(meta_data)
+end
+
+post %r|^/latest/meta-data/(.+)$| do
+  key = params[:captures][0]
   request.body.rewind
-  instance_id = request.body.read 
-  if instance_id.length == ''
-    instance_id = nil
+  value = request.body.read 
+  if value.length == 0
+    meta_data.delete key
+  else
+    meta_data[key] = value
   end
   status 204
 end
-get '/latest/meta-data/instance-id' do
-  if instance_id 
+get %r|^/latest/meta-data/(.+)$| do
+  key = params[:captures][0]
+  if meta_data[key]
     content_type 'text/plain'
-    instance_id.to_s
+    meta_data[key]
   else
     status 404
+    ""
   end
 end
-
 
 post '/profile' do
   begin 

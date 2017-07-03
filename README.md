@@ -104,7 +104,9 @@ I typically add commands such as these to a Makefile that specifies the role app
 
 ### Arbitrary metadata
 
-If you are on a non-EC2 instance developing an application that interacts with the EC2 metadata service's many endpoints ( for example, subnet discovery ,VPC discovery ,etc ), you may find it convenient to be able to set arbitrary parts of the metadata to user-supplied values.  There is a route to support this; anything posted to `/latest/meta-data/<key>` will be available on `/latest/meta-data/<key>` with subsequent GETs.  So you can set, for example, an instance ID or a VPC ID or a Subnet ID, whatever you like.  There is no validation that the URL be extant in the _real_ ec2 metadata service; it just saves and returns.  Observe:
+If you are on a non-EC2 instance developing an application that interacts with the EC2 metadata service's many endpoints ( for example, subnet discovery ,VPC discovery ,etc ), you may find it convenient to be able to set arbitrary parts of the metadata to user-supplied values.  There is a route to support this; anything posted to `/latest/meta-data/<key>` will be available on `/latest/meta-data/<key>` with subsequent GETs.  So you can set, for example, an instance ID or a VPC ID or a Subnet ID, whatever you like.  There is no validation that the URL be extant in the _real_ ec2 metadata service; it just saves and returns.  
+
+Observe:
 
 ```
 $  curl localhost:8009/latest/meta-data/instance-id -X POST --data  "i-1234567890abcdef"
@@ -123,3 +125,4 @@ $ curl localhost:8009/latest/meta-data
 {
 }
 ```
+Above, I've added newlines to the output for readability - but, consistent with the real EC2 metadata service, I do not add newlines or other trailing whitespace to the responses from these endpoints.  All POSTed data is preserved as a string.  

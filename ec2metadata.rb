@@ -1,9 +1,115 @@
-# require 'aws-sdk'
+require 'aws-sdk'
+require 'sinatra'
+require 'curb'
+require 'sinatra/reloader' if development?
+require 'tilt/erubis' 
+require 'json'
+require 'shellwords'
+require 'open3'
+require 'inifile'
 
-`which aws`
-unless $?.exitstatus == 0
-  abort "Can't run without the aws command line utility to assume session token"
+set :bind, '0.0.0.0'
+set :port, 4567
+
+
+class AwsProfile
+
+  @@profiles = Hash.new
+  def self.profile name, refresh=true
+    self.profiles refresh
+    return @@profiles[name]
+  end
+  def self.profiles refresh=true
+    if refresh or @@profiles.keys.length == 0
+      profile_path = File.expand_path "~/.aws/credentials" 
+      aws_config = IniFile.load( profile_path )
+      aws_config.each_section do |section| 
+        @@profiles[section] = AwsProfile.new(section)
+      end
+    end
+    @@profiles.keys
+  end
+
+  attr_reader :name, :current, :roles
+  def initialize name
+    @name = name
+    @credentials = Aws::SharedCredentials.new( profile_name: @name)
+    opts = {  credentials: @credentials }
+    @sts = Aws::STS::Client.new(opts)
+    @iam = Aws::IAM::Client.new(opts)
+    @serial = nil
+    @roles = []
+    @current = {}
+    @mfa_sts = nil
+  end
+  def get_serial_number
+    @serial ||= @iam.list_mfa_devices.mfa_devices[0].serial_number
+    @serial
+  end
+  def get_session_token config, serial=nil
+    if config[:token_code]
+      if not serial
+        get_serial_number
+        serial = @serial
+      end
+      config[:serial_number] = serial
+    end
+    @current = @sts.get_session_token(config).to_h[:credentials]
+    @mfa_sts = Aws::STS::Client.new(  credentials: AWS::Credentials.new( @current) )
+  end
+  def expired?
+    return ( @current[:expiration] and @current[:expiration] <= Time.now)
+  end
+  def expiration
+    return @current[:expiration].to_s
+  end
+  def delete_session_token
+    @current = {}
+  end
+  def assume_role role, config={}
+    config[:role_arn] = role
+    config[:role_session_name] ||= 'ec2metadata-role-assumption' # todo!
+    if config[:token_code] and not config[:serial_number]
+      # we'll provide one for the profile
+      config[:serial_number] = get_serial_number
+    end
+    if @mfa_sts and not expired?
+      sts = @mfa_sts
+    else
+      sts = @sts
+    end
+    resp = sts.assume_role()
+    @roles[ role ] = resp[:credentials]
+  end
+  def to_json
+    { 
+      name: @name,
+      expiration: self.expiration.to_s,
+      expired: self.expired?,
+      roles: @roles
+    }.to_json
+  end
 end
+
+get '/v2/profiles' do 
+  content_type 'application/json'
+  profiles = AwsProfile.profiles
+  return profiles.to_json
+end
+
+get '/v2/profiles/:profile' do
+  content_type 'application/json'
+  profile = AwsProfile.profile( params[:profile] )
+  puts profile
+  if profile
+    profile.to_json
+  else
+    status 404
+    { error: "No such profile '#{params[:profile]}'", valid_values: AwsProfile.profiles(false) }.to_json
+  end
+end
+
+
 
 # the region actually doesn't matter for STS and IAM which are global, but it's required for some calls anyway
 # I suspect it still determines the service endpoint which exist in many regions
@@ -15,15 +121,10 @@ refresh = false
 
 credentials = nil
 
-profile_path = "~/.aws/credentials"
-begin 
-  profile_path = File.expand_path profile_path
-rescue ArgumentError=>e # docker container maybe?
-  profile_path = "/code/.aws/credentials"
-  ENV['HOME'] = '/code'
-end
+profiles = []
+profile_path = File.expand_path "~/.aws/credentials" 
 
-require 'inifile'
+
 aws_config = IniFile.load( profile_path )
 aws_config.each_section do |section| 
   required_fields = %w[ aws_access_key_id aws_secret_access_key ]
@@ -157,16 +258,6 @@ do_assume_role = proc do |params|
 end
 
 
-require 'sinatra'
-require 'curb'
-require 'sinatra/reloader' if development?
-require 'tilt/erubis' 
-require 'json'
-require 'shellwords'
-require 'open3'
-
-set :bind, '0.0.0.0'
-set :port, 4567
 
 
 class PerRequesterRoles 
@@ -198,7 +289,7 @@ end
 
 requester_roles = PerRequesterRoles.new 
 
-get %r|/latest/meta-data/iam/security-credentials/?$| do
+get %r|/latest/meta-data/iam/security-credentials/?| do
  requester_roles.log_requester request
  if current_profile
     if current_role
@@ -211,7 +302,7 @@ end
 require 'zlib' 
 require 'date'
 
-get %r|^/config/current$| do 
+get %r|/config/current| do 
     if current_role
     redirect "/config/#{current_role}", 303 
     else
@@ -236,7 +327,7 @@ post '/authenticate' do
     "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
   end
 end
-get %r|^/config/(.+)/?$| do
+get %r|/config/(.+)/?| do
     content_type 'text/plain'
     region = params['region'] 
     erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile], region: params[:region] || nil  } }
@@ -317,7 +408,7 @@ get '/latest/meta-data' do
   JSON.pretty_generate(meta_data)
 end
 
-post %r|^/latest/meta-data/(.+)$| do
+post %r|/latest/meta-data/(.+)| do
   key = params[:captures][0]
   request.body.rewind
   value = request.body.read 
@@ -328,7 +419,7 @@ post %r|^/latest/meta-data/(.+)$| do
   end
   status 204
 end
-get %r|^/latest/meta-data/(.+)$| do
+get %r|/latest/meta-data/(.+)| do
   key = params[:captures][0]
   if meta_data[key]
     content_type 'text/plain'

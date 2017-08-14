@@ -1,89 +1,45 @@
-  <p>Current profile: <code><%= current_profile %></code></p>
-
-  <form method='POST' action='/profile'>
-  <input type='hidden' name='role' value=''></input>
-  <input type='submit' value='Unset Profile'></input>
-  </form>
-
-  <div id='assumerole'>
-  <form method='POST' action='/authenticate'>
-  <!--
-  <h2>Requesters</h2>
-  <select name='requester'>
-  <% requesters.each do |id,data|
-  %><option value='<%= id %>'><b><%= id %></b>, <%= data[:requests]%></option><%
-  end %>
-  </select>
-  -->
-  <h2>Assume Role:</h2>
-  <table>
-    <tr>
-      <td>Role</td>
-      <td><input name='role' list='roles' style="width: 500px;" autocomplete="off">
-      <datalist id='roles'>
-      <% roles.each do |role|
-        %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
-      <% end %>
-      </datalist></td>
-    </tr>
-      <td>MFA Device
-      </td>
-      <td>
-        <select name='serial' style="width: 500px;">
-        <% mfa_devices.each do |mfa_device|
-          %> <option value='<%= mfa_device %>'><%= mfa_device %></option>
-        <% end %>
-        </select>
-        <option>
-      </td>
-    </tr>
-    <tr><td>Duration (max 3600)</td>
-      <td><input name='duration' value='3600' style="width:150px;"></input></td>
-    </tr>
-    <tr>
-      <td>MFA Token</td>
-      <td><input type='number' name='mfa' style="width:150px;" ></input>
-      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-      <p><em>
-        Since an MFA token was entered at profile selection time, it needn't be
-        entered here.  However, you're still free to do so if you like.
-      </em>
-      </p>
-      <p>Your Muti-Factor Profile Authentication expries at <%= profile_auth[current_profile]['Expiration'] =%>
-      </p>
-    <% end %>
-    </td>
-    <tr>
-    </tr>
-    <tr>
-      <td>Auto-Refresh Credentials</td>
-      <td>
-        <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-        <input type='checkbox' name='autorefresh' title="check to enable auto-refreshing of the role when it exipres" /> 
-        <% else %>
-          <em>Proved an MFA token at profile selection time to allow auto-refreshing credentials</em>
-        <% end %>
-      </td>
-    </tr>
-    <tr><td rowspan='2'><input style="background-color: #ffafaf" type='submit' value='Assume Role'></input></td></tr>
-  </table>
-  </form>
-
+<div class="profiles">
+  <div class="explanation">
+  <p>
+  Profiles are loaded from <%= awsProfiles.credential_source =%>.  
+  To be included in this list, the profile must have configuration fields 
+  <code>aws_access_key_id</code> and <code>aws_secret_access_key</code>; otherwise 
+  they"ll be excluded.
+  </p>
   </div>
-    <% if current_role %>
-      <h3>Current Role</h3>
-      <% if profile_auth[current_profile] and not profile_auth[current_profile].empty? %>
-        <p>Since your profile is MFA authenticated until <%=profile_auth[current_profile]['Expiration']=%>,
-        you can <a target='_blank' href='/config/<%= current_role %>'>Generate an aws config which will automatically
-        assume this role</a>. This provides some <a href='/using-config'>useful functionality</a>. </p>
-      <% else %>
-        <p>Provide MFA at profile selection time for additional options.</p>
-      <% end %>
-      <iframe width='95%' src='/latest/meta-data/iam/security-credentials/'>
-      </iframe>
-
-      <h3>Current Exposed Identity</h3>
-      <p>This identity is straight from <kbd>aws sts get-caller-identity</kbd>.</p>
-      <iframe width='95%' src='/identity'>
-      </iframe>
+<div class="profilelist">
+<% awsProfiles.profiles.each do |profile_name| %>
+<div class="profile">
+<% profile = awsProfiles.profile(profile_name) %>
+  <div class="prof" --data-expiration="<%= profile.expiration =%>" >
+    <h3><%= profile.name =%></h3>
+    <% if profile.expiration and not profile.expired? %>
+    <p class="expiresat"><%= profile.expiration =%></p>
+    <% else %>
+    <form action="/v2/profiles/<%= profile.name =%>/mfa" method=POST>
+    <p><input type="number" min=100000 max=999999 name="mfa"></input></p>
+    <p><button>Get MFA Session Token</button></p>
+    </form>
     <% end %>
+    <!-- todo: this should only display when not already exposed -->
+    <form action='/v2/profiles/<%= profile.name =%>/expose' method=POST>
+    <p><button>Expose</button></p>
+    </form>
+  </div>
+  <div class="roles">
+    <!--<h4>Roles</h4>-->
+    <div class="role"><h4>Role #1</h4></div>
+    <div class="role"><h4>Role #2</h4></div>
+    <div class="role"><h4>Role #3</h4></div>
+    <div class="role">
+      <h4>Add a role...</h4>    
+      <form action='/v2/profiles/<%= profile.name =%>/roles' method='POST'>
+      <p><label for='role_arn'>Arn</label>: <input type="text" name="role_arn"></input> </p>
+      <p><label for='role_mfa'>MFA</label>: <input type="number" min=100000 max=999999 name="role_mfa"></input>
+      </form>
+    </div>
+  </div>
+</div><!-- profile <%= profile.name =%> -->
+<% end %>
+</div><!-- profilelist -->
+</div><!-- profiles -->

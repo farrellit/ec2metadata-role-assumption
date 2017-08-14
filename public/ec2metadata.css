@@ -12,3 +12,19 @@ table tr td {
   margin: 0.7em;
   padding: 0.3em;
 }
+
+div.profilelist {
+  display: flex;
+  flex-direction: column;
+}
+
+div.profile div.prof, div.profile div.role {
+  border: solid 1px black;
+  border-radius: 3px;
+  padding: 0.3em;
+  margin: 0.7em
+}
+
+div.profilelist div.profile {
+  display: flex
+}

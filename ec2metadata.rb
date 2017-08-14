@@ -12,23 +12,33 @@ set :bind, '0.0.0.0'
 set :port, 4567
 
 
-class AwsProfile
-
-  @@profiles = Hash.new
-  def self.profile name, refresh=true
-    self.profiles refresh
-    return @@profiles[name]
+# collection of AWS profiles
+# also handles knowing which is exposed
+class AwsProfiles
+  attr_reader :credential_source
+  def initialize source='~/.aws/credentials'
+    @profiles = Hash.new
+    @credential_source = source
   end
-  def self.profiles refresh=true
-    if refresh or @@profiles.keys.length == 0
-      profile_path = File.expand_path "~/.aws/credentials" 
+  def profile name, refresh=true
+    self.profiles refresh
+    return @profiles[name]
+  end
+  def profiles refresh=true
+    if refresh or @profiles.keys.length == 0
+      profile_path = File.expand_path @credential_source
       aws_config = IniFile.load( profile_path )
       aws_config.each_section do |section| 
-        @@profiles[section] = AwsProfile.new(section)
+        next unless aws_config[section].keys.include?('aws_access_key_id') and aws_config[section].keys.include?('aws_secret_access_key')
+        @profiles[section] = AwsProfile.new(section)
       end
     end
-    @@profiles.keys
+    @profiles.keys
   end
+end
+
+# one AWS Profile
+class AwsProfile
 
   attr_reader :name, :current, :roles
   def initialize name
@@ -66,6 +76,13 @@ class AwsProfile
   def delete_session_token
     @current = {}
   end
+  def expiration 
+    if @mfa_sts and not expired?
+      return @current[:expiration]
+    else
+      return nil
+    end
+  end
   def assume_role role, config={}
     config[:role_arn] = role
     config[:role_session_name] ||= 'ec2metadata-role-assumption' # todo!
@@ -84,23 +101,25 @@ class AwsProfile
   def to_json
     { 
       name: @name,
-      expiration: self.expiration.to_s,
-      expired: self.expired?,
+      expiration: @current[:expiration].to_s,
+      expired: expired?,
       roles: @roles
     }.to_json
   end
 end
 
+awsProfiles = AwsProfiles.new
+
 get '/v2/profiles' do 
   content_type 'application/json'
-  profiles = AwsProfile.profiles
+  profiles = awsProfiles.profiles
   return profiles.to_json
 end
 
 get '/v2/profiles/:profile' do
   content_type 'application/json'
-  profile = AwsProfile.profile( params[:profile] )
-  puts profile
+  profile = awsProfiles.profile( params[:profile] )
+  #puts profile
   if profile
     profile.to_json
   else
@@ -109,6 +128,15 @@ get '/v2/profiles/:profile' do
   end
 end
 
+post "/v2/profiles/:profile/mfa" do
+  status 500
+  "unimplemented"
+end
+
+
+get '/v2' do
+    erb :index, { layout: :main, locals: { awsProfiles: awsProfiles } }
+end
 
 
 # the region actually doesn't matter for STS and IAM which are global, but it's required for some calls anyway

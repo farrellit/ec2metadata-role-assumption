@@ -1,9 +1,16 @@
+NAME = ec2metadata
 
 up: 
-	docker run -e RACK_ENV=production -it --rm -p 127.0.0.1:8009:4567 -v `ls -d ~/.aws`:/root/.aws farrellit/ec2metadata:latest
+	docker run --name $(NAME) \
+		-e RACK_ENV=production \
+		-it --rm -p 127.0.0.1:8009:4567 \
+		-v `ls -d ~/.aws`:/root/.aws farrellit/ec2metadata:latest
 
 daemon: 
-	docker run -e RACK_ENV=production --rm -d -p 127.0.0.1:8009:4567 -v `ls -d ~/.aws`:/root/.aws farrellit/ec2metadata:latest
+	docker run --name $(NAME) \
+		-e RACK_ENV=production \
+		--rm -d -p 127.0.0.1:8009:4567 \
+		-v `ls -d ~/.aws`:/root/.aws farrellit/ec2metadata:latest
 
 pull:
 	docker pull farrellit/ec2metadata:latest

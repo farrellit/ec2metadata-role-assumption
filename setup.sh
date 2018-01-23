@@ -18,7 +18,7 @@ if [ "$OS" == "Darwin" ] ; then
 
 elif [ "$OS" == "Linux" ] ; then
   sudo ip address add $LOCALIP/32 label lo:0 dev lo
-  sudo iptables -t nat -I OUTPUT --src localhost --dst $LOCALIP -p tcp --dport 80 -j REDIRECT --to-ports 8009
+  sudo iptables -t nat -I OUTPUT --dst $LOCALIP -p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:8009
 else
   echo "OS Not detected correctly"
   exit 1

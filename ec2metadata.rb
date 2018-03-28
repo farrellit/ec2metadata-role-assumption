@@ -198,7 +198,7 @@ end
 
 requester_roles = PerRequesterRoles.new 
 
-get %r|/latest/meta-data/iam/security-credentials/?$| do
+get %r|/latest/meta-data/iam/security-credentials/?| do
  requester_roles.log_requester request
  if current_profile
     if current_role
@@ -211,7 +211,7 @@ end
 require 'zlib' 
 require 'date'
 
-get %r|^/config/current$| do 
+get %r|/config/current| do 
     if current_role
     redirect "/config/#{current_role}", 303 
     else
@@ -236,7 +236,7 @@ post '/authenticate' do
     "<p><b>Failed to assume role:</b> <code>#{ result[:stderr] }</code></p> <p>Please use the back button on your browser to try again.</p>"
   end
 end
-get %r|^/config/(.+)/?$| do
+get %r|/config/(.+)/?| do
     content_type 'text/plain'
     region = params['region'] 
     erb :config, { locals: { role: params['captures'].first, profile_auth: profile_auth[current_profile], region: params[:region] || nil  } }
@@ -317,7 +317,7 @@ get '/latest/meta-data' do
   JSON.pretty_generate(meta_data)
 end
 
-post %r|^/latest/meta-data/(.+)$| do
+post %r|/latest/meta-data/(.+)| do
   key = params[:captures][0]
   request.body.rewind
   value = request.body.read 
@@ -328,7 +328,7 @@ post %r|^/latest/meta-data/(.+)$| do
   end
   status 204
 end
-get %r|^/latest/meta-data/(.+)$| do
+get %r|/latest/meta-data/(.+)| do
   key = params[:captures][0]
   if meta_data[key]
     content_type 'text/plain'

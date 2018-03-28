@@ -1,25 +1,29 @@
 #!/bin/bash
 
+MYNAME=`whoami`@`hostname`
+
 LOCALIP='169.254.169.254'
-OS=$(uname -s)
 
-# not sure if this is really required or a good idea
-# grep -F "$LOCALIP localhost" /etc/hosts || echo "$LOCALIP localhost" | sudo tee -a /etc/hosts
-
-if [ "$OS" == "Darwin" ] ; then
-  # From http://apple.stackexchange.com/questions/230300/what-is-the-modern-way-to-do-port-forwarding-on-el-capitan-forward-port-80-to
-
-  # This creates a local device on $LOCALIP
-  sudo ifconfig lo0 alias $LOCALIP 255.255.255.255
-
-  echo "
-  rdr pass on lo0 inet proto tcp from (lo0) to $LOCALIP port 80 -> 127.0.0.1 port 8009
-  " | sudo pfctl -ef -
-
-elif [ "$OS" == "Linux" ] ; then
-  sudo ip address add $LOCALIP/32 label lo:0 dev lo
-  sudo iptables -t nat -I OUTPUT --dst $LOCALIP -p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:8009
+if [ "`id -u`" == "0" ]; then
+  sudo=""
 else
-  echo "OS Not detected correctly"
+  sudo="sudo"
+fi
+
+if $sudo which ip; then 
+  # todo: what if lo:0 is in use?  Shouldn't we check?  is there an automatic way?
+  $sudo ip address add $LOCALIP/32 label lo:0 dev lo
+elif $sudo which ifconfig; then 
+  $sudo ifconfig lo0 alias $LOCALIP 255.255.255.255
+else
+  echo "IP Configuration utility not detected correctly"
   exit 1
 fi
+# this docker runs on 80 and will have to be sudoed
+# better than a redirect, I believe.
+
+$sudo docker run --name ec2metadata -e RACK_ENV=production \
+  ${args:---rm -d} -p 169.254.169.254:80:4567 \
+  -v `ls -d ~/.aws`:/root/.aws \
+  -e MYNAME \
+  ${image:-farrellit/ec2metadata:latest}

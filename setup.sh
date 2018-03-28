@@ -23,7 +23,7 @@ fi
 # better than a redirect, I believe.
 
 $sudo docker run --name ec2metadata -e RACK_ENV=production \
-  --rm -d -p 169.254.169.254:80:4567 \
+  ${args:---rm -d} -p 169.254.169.254:80:4567 \
   -v `ls -d ~/.aws`:/root/.aws \
   -e MYNAME \
-  farrellit/ec2metadata:latest 
+  ${image:-farrellit/ec2metadata:latest}

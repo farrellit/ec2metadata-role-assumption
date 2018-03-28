@@ -13,9 +13,12 @@ publish:
 	docker tag ec2metadata farrellit/ec2metadata:latest
 	docker push farrellit/ec2metadata:latest
 
+test: 
+	image=ec2metadata ./setup.sh
+
 # for local testing
 build:
 	docker build -t ec2metadata .
 
 develop:  build
-	docker run -it --rm -p 8009:4567 -v `pwd`:/code -v `ls -d ~/.aws`:/root/.aws ec2metadata
+	args="-it --rm -v `pwd`:/code" image=ec2metadata ./setup.sh

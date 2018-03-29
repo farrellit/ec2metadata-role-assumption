@@ -7,7 +7,7 @@ This service provides:
 
 * an interface to assume roles to configure those credentials through a web interface;
 * a configuration file endpoint that can be used by `curl` to generate config files using the assumed token from the web interface and a specified role ( great for automated testing);
-* optionally, an endpoint on 169.254.169.254:80 that can answer AWS client requests for credentials (boto, aws-sdk-ruby, and others will try to pull from here automatically )
+* optionally, an endpoint on 169.254.169.254:80 that can answer AWS client requests for credentials (boto, aws-sdk-ruby, and others will try to pull from here automatically ).  It can also provide arbirary metadatafor mocking up the avaliable endpoints of an EC2 instance's metadata.
 
 Configuring the ec2 metadata endpoint requires superuser privileges to create the IP address 169.254.169.254 on the loopback device and listening to 169.265.169.254:80 to the docker container.  These commands are handled in `setup.sh`
 

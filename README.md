@@ -13,7 +13,7 @@ Configuring the ec2 metadata endpoint requires superuser privileges to create th
 
 # Quick Start
 
-If you're upgrading to the newest version (from <1.0 to >=1.0), you'll need to take a one-time operation to clear out the redirects that were used in the old version.  See "Updating to a newer version" below.  
+If you're upgrading to the newest version (from <1.0 to >=1.0), you'll need to take a one-time operation to clear out the redirects that were used in the old version.  See "Updating from <1.0 to >=1.0" below.  
 
 Ensure that `~/.aws/credentials` holds your IAM profiles with keys and secrets.   **See note about the default profile**
 

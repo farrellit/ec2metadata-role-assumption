@@ -28,6 +28,6 @@ fi
 
 $sudo $dockercmd run --name ec2metadata -e RACK_ENV=production \
   ${args:---rm -d} -p $LOCALIP:80:4567 \
-  -v `ls -d ~/.aws`:/root/.aws \
+  -v `ls -d ${AWS_PROFILE_PATH:-~/.aws}`:/root/.aws \
   -e MYNAME \
   ${image:-farrellit/ec2metadata:latest}

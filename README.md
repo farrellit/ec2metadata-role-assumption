@@ -95,6 +95,20 @@ This simply runs `setup.sh` in recent versions.
 make daemon
 ```
 
+### Windows Subsystem for Linux (WSL)
+If you're using [Docker for Windows](https://docs.docker.com/docker-for-windows/install/), and executing it via the WSL Bash shell,
+the only additional thing needed to make this work is to define a `AWS_PROFILE_PATH` environment variable to a location on Windows
+where the `.aws` directory is located. Since Docker is running on the Windows host, it is going to expect a path to somewhere in Windows,
+and not the Ubuntu instance where the shell is running. 
+
+For example: `export AWS_PROFILE_PATH="/c/Users/<username>/.aws"`
+
+_You may also need to symlink `/mnt/c` to `/c` so the WSL and Windows paths are in sync: `ln -s /mnt/c /c`_
+
+If you are executing Docker from Windows natively without WSL, a variation of `setup.sh` will be needed as that is currently assuming
+a unix environment.
+
+
 ## Usage
 
 Navigate to <http://169.254.169.254>.

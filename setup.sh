@@ -19,11 +19,15 @@ else
   echo "IP Configuration utility not detected correctly"
   exit 1
 fi
-# this docker runs on 80 and will have to be sudoed
-# better than a redirect, I believe.
 
-$sudo docker run --name ec2metadata -e RACK_ENV=production \
+if which "docker.exe" > dev/null 2>&1; then
+  dockercmd="docker.exe"
+else
+  dockercmd="docker"
+fi
+
+$dockercmd run --name ec2metadata -e RACK_ENV=production \
   ${args:---rm -d} -p 169.254.169.254:80:4567 \
-  -v `ls -d ~/.aws`:/root/.aws \
+  -v `ls -d "$${AWS_PROFILE_PATH:-~/.aws}"`:/root/.aws \
   -e MYNAME \
   ${image:-farrellit/ec2metadata:latest}

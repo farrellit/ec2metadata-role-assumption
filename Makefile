@@ -13,8 +13,8 @@ publish:
 	docker tag ec2metadata farrellit/ec2metadata:latest
 	docker push farrellit/ec2metadata:latest
 
-test: 
-	image=ec2metadata ./setup.sh
+test:  build
+	RACK_ENV=development args=--rm image=ec2metadata ./setup.sh
 
 # for local testing
 build:

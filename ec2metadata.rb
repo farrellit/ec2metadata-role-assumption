@@ -52,6 +52,7 @@ sort_roles = proc {
       unless res # one or the other is in used_roles
 	      #$stderr.puts "neither #{a} or #{b} in used_roles"
         order = [
+          %r|:role/se/| ,
           %r|:role/admin$|,
           %r|:role/app/| ,
           %r|:role/admin/|,
@@ -159,6 +160,7 @@ end
 
 require 'sinatra'
 require 'curb'
+require 'sinatra/cookies'
 require 'sinatra/reloader' if development?
 require 'tilt/erubis' 
 require 'json'
@@ -229,6 +231,11 @@ post '/authenticate' do
   result = do_assume_role[params]
   if result[:status].exitstatus == 0 
     content_type 'text/json'
+    begin 
+      cookies[:history] = ([params[:role]] + JSON.parse(cookies[:history]||"[]") ).uniq.to_json
+    rescue JSON::ParserError
+      cookies[:history] = "[]"
+    end
     redirect back, JSON.pretty_generate(result)
   else
     status 500
@@ -291,7 +298,13 @@ get '/' do
     end
   else
     sort_roles.call()
-    erb :index, { layout: :main, locals: { current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => roles, :profile_auth => profile_auth } }
+    begin
+      sorted_roles = (JSON.parse(cookies[:history]||'[]') + roles).uniq
+    rescue JSON::ParserError
+      cookies[:history] = "[]"
+      sorted_roles = roles
+    end
+    erb :index, { layout: :main, locals: { current_role: current_role, requesters: requester_roles.requester_roles, current_profile: current_profile, mfa_devices: mfa_devices,  :roles => sorted_roles, :profile_auth => profile_auth } }
   end
 end
 
@@ -350,6 +363,11 @@ post '/profile' do
     puts params.inspect
     current_profile = params[:profile]
     discover_profile_data.call( params[:profile_mfa], params[:profile_mfa_time], ( params[:listroles] == 'on') )
+    begin
+      roles = JSON.parse(cookies[:history]||'[]') + roles
+    rescue JSON::ParserError
+      cookies[:history] = "[]"
+    end
     redirect '/', 303 
   else
     status 404

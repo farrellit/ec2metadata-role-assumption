@@ -22,7 +22,7 @@
       <td><input name='role' list='roles' style="width: 500px;" autocomplete="off">
       <datalist id='roles'>
       <% roles.each do |role|
-        %><option value='<%= role %>'><%= role.gsub(/.*:role\//, '' ) %></option>
+        %><option value='<%= role %>'><%= role %></option>
       <% end %>
       </datalist></td>
     </tr>

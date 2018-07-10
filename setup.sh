@@ -57,6 +57,10 @@ if [[ $? != 0 ]] ; then
     $DOCKERNETNAME
 fi
 
+if [ -z ${image+x} ]; then 
+  $dockercmd pull farrellit/ec2metadata:latest
+fi 
+
 $dockercmd run \
   --name ec2metadata \
   -e RACK_ENV=${RACK_ENV:-production} \

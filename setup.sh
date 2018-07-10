@@ -19,34 +19,14 @@ else
   dockercmd="docker"
 fi
 
+# Do not use the lo interface in Linux.  Any IPs assigned outside of the
+# 127.0.0.0/8 network will be shared across all interfaces.  This means your
+# 169.254.169.254 IP and role assumption will be shared across the network!
+# Why not use a docker net?  Then we can be OS-agnostic.
 
-# we might need to remove 169.254.169.254 from lo, 
-# added by older versions
-if $sudo which ifconfig; then 
-  # mac uses lo0, maybe other bsds too?
-  if $sudo ifconfig lo0 > /dev/null 2>&1; then 
-    interface=lo0
-  else
-    interface=lo
-  fi
-  if $sudo ifconfig $interface | grep -qF 169.254.169.254; then
-    $sudo ifconfig $interface delete 169.254.169.254
-  fi
-elif $sudo which ip; then 
-  # some people do have `ip` on osx, it turns out, maybe others too
-  if $sudo ip show dev lo0 | grep -q -F 169.254.169.254; then
-    interface=lo0
-  else
-    interface=lo
-  fi
-  $sudo ip addr del 169.254.169.254 dev lo0
-fi 
-
-# use a docker net -  then we can be OSagnostic.
-
-$dockercmd network inspect $DOCKERNETNAME &> /dev/null
+$sudo $dockercmd network inspect $DOCKERNETNAME &> /dev/null
 if [[ $? != 0 ]] ; then
-  $dockercmd network create \
+  $sudo $dockercmd network create \
     --gateway $DOCKERGATEWAY \
     --subnet $DOCKERNET \
     -o com.docker.network.bridge.enable_icc=true \
@@ -57,7 +37,7 @@ if [[ $? != 0 ]] ; then
     $DOCKERNETNAME
 fi
 
-$dockercmd run \
+$sudo $dockercmd run \
   --name ec2metadata \
   -e RACK_ENV=${RACK_ENV:-production} \
   --network $DOCKERNETNAME \

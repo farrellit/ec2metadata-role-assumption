@@ -66,3 +66,9 @@ $dockercmd run \
   -e MYNAME \
   ${args:---rm -d} \
   ${image:-farrellit/ec2metadata:latest}
+
+if which open > /dev/null 2>&1; then
+  open http://169.254.169.254
+else
+  echo "Visit http://169.254.169.254"
+fi

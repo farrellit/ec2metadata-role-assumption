@@ -2,22 +2,15 @@
 
 MYNAME=`whoami`@`hostname`
 
-LOCALIP='169.254.169.254'
+DOCKERNETNAME='ec2metadata'
+# Using a /30 here only allows 169.254.169.254 available.
+DOCKERNET='169.254.169.252/30'
+DOCKERGATEWAY='169.254.169.253'
 
 if [ "`id -u`" == "0" ]; then
   sudo=""
 else
   sudo="sudo"
-fi
-
-if $sudo which ip; then 
-  # todo: what if lo:0 is in use?  Shouldn't we check?  is there an automatic way?
-  $sudo ip address add $LOCALIP/32 label lo:0 dev lo
-elif $sudo which ifconfig; then 
-  $sudo ifconfig lo0 alias $LOCALIP 255.255.255.255
-else
-  echo "IP Configuration utility not detected correctly"
-  exit 1
 fi
 
 if which "docker.exe" > /dev/null 2>&1; then
@@ -26,8 +19,30 @@ else
   dockercmd="docker"
 fi
 
-$sudo $dockercmd run --name ec2metadata -e RACK_ENV=${RACK_ENV:-production}\
-  ${args:---rm -d} -p $LOCALIP:80:4567 \
+# Do not use the lo interface in Linux.  Any IPs assigned outside of the
+# 127.0.0.0/8 network will be shared across all interfaces.  This means your
+# 169.254.169.254 IP and role assumption will be shared across the network!
+# Why not use a docker net?  Then we can be OS-agnostic.
+
+$sudo $dockercmd network inspect $DOCKERNETNAME &> /dev/null
+if [[ $? != 0 ]] ; then
+  $sudo $dockercmd network create \
+    --gateway $DOCKERGATEWAY \
+    --subnet $DOCKERNET \
+    -o com.docker.network.bridge.enable_icc=true \
+    -o com.docker.network.bridge.enable_ip_masquerade=true \
+    -o com.docker.network.bridge.host_binding_ipv4=0.0.0.0 \
+    -o com.docker.network.bridge.name=$DOCKERNETNAME \
+    -o com.docker.network.driver.mtu=1500 \
+    $DOCKERNETNAME
+fi
+
+$sudo $dockercmd run \
+  --name ec2metadata \
+  -e RACK_ENV=${RACK_ENV:-production} \
+  --network $DOCKERNETNAME \
+  -p 80:80 \
   -v `ls -d ${AWS_PROFILE_PATH:-~/.aws}`:/root/.aws \
   -e MYNAME \
+  ${args:---rm -d} \
   ${image:-farrellit/ec2metadata:latest}

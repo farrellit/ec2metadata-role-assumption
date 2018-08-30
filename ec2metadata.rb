@@ -209,6 +209,13 @@ get %r|/latest/meta-data/iam/security-credentials/?| do
   end
 end
 
+# This is here to support hashicorp/terraform
+get %r|/latest/meta-data/instance-id/?| do
+  status 200
+  content_type 'text/plain'
+  "i-123456"
+end
+
 #require 'digest/sha1' # crc should be faster!
 require 'zlib' 
 require 'date'
